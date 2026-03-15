@@ -34,6 +34,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
             }
         });
     } catch (e) {
+        console.error(e)
         return new NextResponse('File not found', { status: 404 });
     }
 }

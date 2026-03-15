@@ -46,9 +46,10 @@ next-env.d.ts
 *.db
 *.db-journal
 
-# uploads
+# uploads & local storage
 /public/uploads/*
 !/public/uploads/.gitkeep
+/storage/
 
 # test files
 test-prisma.js
