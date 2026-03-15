@@ -23,8 +23,16 @@ export async function POST(req: NextRequest) {
         const originalName = file.name.replace(/[^a-zA-Z0-9.]/g, '_'); // sanitize
         const filename = `${uniqueSuffix}-${originalName}`;
 
-        // Save to central storage or local public/uploads directory
-        const uploadDir = process.env.UPLOAD_PATH || join(process.cwd(), 'public', 'uploads');
+        // Detect the root storage path safely (same as admin/files)
+        const getStorageRoot = () => {
+            if (process.env.STORAGE_PATH) return process.env.STORAGE_PATH;
+            if (process.env.UPLOAD_PATH) return join(process.env.UPLOAD_PATH, '..');
+            const localDir = join(process.cwd(), 'storage');
+            return localDir;
+        };
+
+        const storageRoot = getStorageRoot();
+        const uploadDir = join(storageRoot, 'uploads');
 
         // Ensure directory exists
         try {

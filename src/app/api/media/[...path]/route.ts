@@ -7,7 +7,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
         const { path } = await params;
         const filename = path.join('/');
 
-        const uploadDir = process.env.UPLOAD_PATH || join(process.cwd(), 'public', 'uploads');
+        const getStorageRoot = () => {
+            if (process.env.STORAGE_PATH) return process.env.STORAGE_PATH;
+            if (process.env.UPLOAD_PATH) return join(process.env.UPLOAD_PATH, '..');
+            const localDir = join(process.cwd(), 'storage');
+            return localDir;
+        };
+
+        const storageRoot = getStorageRoot();
+        const uploadDir = join(storageRoot, 'uploads');
         const filepath = join(uploadDir, filename);
 
         const file = await readFile(filepath);
