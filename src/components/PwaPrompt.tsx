@@ -4,32 +4,61 @@ import { useEffect, useState } from 'react';
 
 export default function PwaPrompt() {
     const [isIOS, setIsIOS] = useState(false);
+    const [isAndroid, setIsAndroid] = useState(false);
     const [isStandalone, setIsStandalone] = useState(false);
     const [showPrompt, setShowPrompt] = useState(false);
+    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
     useEffect(() => {
-        // Detect iOS
+        // Detect OS
         const userAgent = window.navigator.userAgent.toLowerCase();
         const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
+        const isAndroidDevice = /android/.test(userAgent);
+
         setIsIOS(isIosDevice);
+        setIsAndroid(isAndroidDevice);
 
         // Detect if already installed / running in standalone
         const isAppMode = ('standalone' in window.navigator && (window.navigator as any).standalone) || window.matchMedia('(display-mode: standalone)').matches;
         setIsStandalone(isAppMode);
 
+        const dismissed = localStorage.getItem('pwa-prompt-dismissed');
+
         // Show prompt if on iOS and not yet installed, user hasn't dismissed recently
-        if (isIosDevice && !isAppMode) {
-            const dismissed = localStorage.getItem('pwa-prompt-dismissed');
-            if (!dismissed) {
+        if (isIosDevice && !isAppMode && !dismissed) {
+            setShowPrompt(true);
+        }
+
+        // Android / Chrome installation event
+        const handleBeforeInstallPrompt = (e: any) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+            if (!dismissed && isAndroidDevice) {
                 setShowPrompt(true);
             }
-        }
+        };
+
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+        return () => {
+            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        };
     }, []);
 
     const dismissPrompt = () => {
         setShowPrompt(false);
         // Hide for a week if dismissed
         localStorage.setItem('pwa-prompt-dismissed', Date.now().toString());
+    };
+
+    const installPWA = async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            setShowPrompt(false);
+        }
+        setDeferredPrompt(null);
     };
 
     if (!showPrompt) return null;
@@ -59,9 +88,24 @@ export default function PwaPrompt() {
                 เพิ่มแอปนี้ลงในหน้าจอโฮมเพื่อใช้งานแบบแอปพลิเคชันเต็มรูปแบบ
             </p>
 
-            <div style={{ background: 'var(--bg)', padding: '12px', borderRadius: '8px', fontSize: '0.85rem' }}>
-                แอปเปิล (iOS): กด <b style={{ fontSize: '1.2rem' }}>⍗</b> (Share) ด้านล่าง <br />แล้วเลือก <b>"Add to Home Screen"</b> ➕
-            </div>
+            {isIOS && (
+                <div style={{ background: 'var(--bg)', padding: '12px', borderRadius: '8px', fontSize: '0.85rem' }}>
+                    แอปเปิล (iOS): กด <b style={{ fontSize: '1.2rem' }}>⍗</b> (Share) ด้านล่าง <br />แล้วเลือก <b>"Add to Home Screen"</b> ➕
+                </div>
+            )}
+
+            {isAndroid && (
+                <button
+                    onClick={installPWA}
+                    style={{
+                        background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
+                        color: 'white', border: 'none', padding: '10px', borderRadius: '8px',
+                        fontWeight: 'bold', cursor: 'pointer', marginTop: '4px'
+                    }}
+                >
+                    ติดตั้งแอป P2L (Install) 🚀
+                </button>
+            )}
         </div>
     );
 }

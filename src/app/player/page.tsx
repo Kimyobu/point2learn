@@ -11,6 +11,7 @@ export default function PlayerDashboard() {
     const [messages, setMessages] = useState<any[]>([]);
     const [user, setUser] = useState<any>(null);
     const [uploading, setUploading] = useState<string | null>(null);
+    const [sortOption, setSortOption] = useState('NEWEST');
 
     useEffect(() => {
         fetchData();
@@ -63,7 +64,15 @@ export default function PlayerDashboard() {
         return { title: 'สุดยอดนางฟ้า 👼', min: 1000, max: 1000, level: 5 };
     };
 
-    const tasksByType = tasks.reduce((acc, task) => {
+    const sortedTasks = (() => {
+        let result = [...tasks];
+        if (sortOption === 'NEWEST') result.reverse();
+        if (sortOption === 'POINTS_DESC') result.sort((a, b) => b.points - a.points);
+        if (sortOption === 'POINTS_ASC') result.sort((a, b) => a.points - b.points);
+        return result;
+    })();
+
+    const tasksByType = sortedTasks.reduce((acc, task) => {
         if (!acc[task.type]) acc[task.type] = [];
         acc[task.type].push(task);
         return acc;
@@ -112,6 +121,20 @@ export default function PlayerDashboard() {
             <div className="card" style={{ marginBottom: '32px', textAlign: 'center', background: 'linear-gradient(to right, var(--primary-light), var(--surface))' }}>
                 <h1 className="title" style={{ fontSize: '2rem', marginBottom: '8px' }}>สวัสดีคนเก่ง วันนี้ทำได้ดีมากครับ! 💖</h1>
                 <p style={{ fontSize: '1.1rem', color: 'var(--text-main)' }}>สู้ๆ กับภารกิจวันนี้ เก็บพอยท์ไปแลกของรางวัลกันน้า 🎁</p>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+                <select
+                    className="input-field"
+                    style={{ width: 'auto', padding: '8px 12px', minWidth: '150px' }}
+                    value={sortOption}
+                    onChange={(e) => setSortOption(e.target.value)}
+                >
+                    <option value="NEWEST">ใหม่ล่าสุด</option>
+                    <option value="OLDEST">เก่าสุด</option>
+                    <option value="POINTS_DESC">พอยท์ (มากไปน้อย)</option>
+                    <option value="POINTS_ASC">พอยท์ (น้อยไปมาก)</option>
+                </select>
             </div>
 
             {Object.entries(tasksByType).map(([type, list]) => (

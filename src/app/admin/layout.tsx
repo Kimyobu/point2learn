@@ -60,6 +60,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <nav style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
                     <Link href="/admin" style={getLinkStyle('/admin')}>ตรวจงาน ✉️</Link>
                     <Link href="/admin/tasks" style={getLinkStyle('/admin/tasks')}>จัดการภารกิจ 📝</Link>
+                    <Link href="/admin/history" style={getLinkStyle('/admin/history')}>ประวัติ 📋</Link>
                     <Link href="/admin/store" style={getLinkStyle('/admin/store')}>จัดการร้านค้า 🎁</Link>
                     <Link href="/admin/messages" style={getLinkStyle('/admin/messages')}>จดหมายลับ 💌</Link>
                     <Link href="/admin/db" style={getLinkStyle('/admin/db')}>ฐานข้อมูล 🗄️</Link>

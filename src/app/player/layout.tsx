@@ -78,6 +78,7 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
                 </div>
                 <nav style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
                     <Link href="/player" style={getLinkStyle('/player')}>ภารกิจ 📝</Link>
+                    <Link href="/player/history" style={getLinkStyle('/player/history')}>ประวัติ 📖</Link>
                     <Link href="/player/store" style={getLinkStyle('/player/store')}>ร้านค้า 🎁</Link>
                     <Link href="/player/profile" style={getLinkStyle('/player/profile')}>
                         {displayUsername}

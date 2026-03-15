@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@serwist/next": "^9.5.7",
     "bcryptjs": "^3.0.3",
     "jose": "^6.2.1",
     "next": "16.1.6",
@@ -30,6 +31,7 @@
     "eslint-config-next": "16.1.6",
     "fs-extra": "^11.3.4",
     "prisma": "^5.22.0",
+    "sharp": "^0.34.5",
     "tsx": "^4.21.0",
     "typescript": "^5"
   }

@@ -7,28 +7,35 @@ async function main() {
     const adminPassword = await bcrypt.hash('admin123', 10);
     const playerPassword = await bcrypt.hash('love123', 10);
 
-    const admin = await prisma.user.upsert({
-        where: { username: 'admin' },
-        update: {},
-        create: {
-            username: 'admin',
-            password: adminPassword,
-            role: 'ADMIN',
-        },
-    });
+    const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
+    if (adminCount === 0) {
+        await prisma.user.create({
+            data: {
+                username: 'admin',
+                password: adminPassword,
+                role: 'ADMIN',
+            },
+        });
+        console.log('Created default ADMIN account');
+    } else {
+        console.log(`ADMIN account already exists (${adminCount} found)`);
+    }
 
-    const player = await prisma.user.upsert({
-        where: { username: 'player' },
-        update: {},
-        create: {
-            username: 'player',
-            password: playerPassword,
-            role: 'PLAYER',
-        },
-    });
+    const playerCount = await prisma.user.count({ where: { role: 'PLAYER' } });
+    if (playerCount === 0) {
+        await prisma.user.create({
+            data: {
+                username: 'player',
+                password: playerPassword,
+                role: 'PLAYER',
+            },
+        });
+        console.log('Created default PLAYER account');
+    } else {
+        console.log(`PLAYER account already exists (${playerCount} found)`);
+    }
 
-    console.log('Seed completed successfully:');
-    console.log({ admin: admin.username, player: player.username });
+    console.log('Seed check completed successfully.');
 }
 
 main()
