@@ -63,6 +63,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <Link href="/admin/store" style={getLinkStyle('/admin/store')}>จัดการร้านค้า 🎁</Link>
                     <Link href="/admin/messages" style={getLinkStyle('/admin/messages')}>จดหมายลับ 💌</Link>
                     <Link href="/admin/db" style={getLinkStyle('/admin/db')}>ฐานข้อมูล 🗄️</Link>
+                    <Link href="/admin/files" style={getLinkStyle('/admin/files')}>ไฟล์ 📂</Link>
                     <Link href="/admin/account" style={getLinkStyle('/admin/account')}>ตั้งค่าบัญชี ⚙️</Link>
                     <button onClick={handleLogout} style={{ ...getLinkStyle(''), color: 'var(--danger)', marginLeft: '8px', minWidth: 'max-content' }}>
                         ออกระบบ
