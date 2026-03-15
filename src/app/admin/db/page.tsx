@@ -91,6 +91,43 @@ export default function DbEditorPage() {
                 <button className={model === 'submissions' ? 'btn-primary' : 'btn-secondary'} style={{ width: 'auto' }} onClick={() => setModel('submissions')}>✉️ Submissions</button>
             </div>
 
+            <div className="card" style={{ marginBottom: '24px', padding: '16px', border: '1px solid var(--primary-light)', background: 'var(--surface)' }}>
+                <h3 style={{ marginBottom: '8px', fontSize: '1rem' }}>📥 อัปโหลดฐานข้อมูลเก่า (.db)</h3>
+                <p style={{ fontSize: '0.85rem', color: 'gray', marginBottom: '16px' }}>หากคุณมีไฟล์ `dev.db` จากเครื่องตัวเอง หรือสำรองไว้ สามารถส่งขึ้นระบบได้ที่นี่ (ระบบจะทับของเดิมทั้งหมด)</p>
+                <input
+                    type="file"
+                    accept=".db"
+                    id="db-upload"
+                    style={{ fontSize: '0.9rem', width: '100%', padding: '12px', border: '2px dashed #ccc', borderRadius: '8px', cursor: 'pointer', background: 'white' }}
+                    onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!confirm('ยืนยันระบบจะนำไฟล์นี้ไปทับฐานข้อมูลเดิมทั้งหมดบน Server แน่ใจหรือไม่?')) return;
+
+                        setLoading(true);
+                        const formData = new FormData();
+                        formData.append('file', file);
+
+                        try {
+                            const res = await fetch('/api/admin/db-upload', { method: 'POST', body: formData });
+                            const data = await res.json();
+                            if (res.ok) {
+                                alert(data.message || 'อัปโหลดเรียบร้อย โปรเจกต์อาจจะเริ่มการทำงานใหม่สักครู่');
+                                fetchData(model);
+                            } else {
+                                alert('Error: ' + data.error);
+                            }
+                        } catch (err) {
+                            alert('Upload failed');
+                        }
+
+                        // Clear input
+                        (document.getElementById('db-upload') as HTMLInputElement).value = '';
+                        setLoading(false);
+                    }}
+                />
+            </div>
+
             {loading ? (
                 <p>Loading records...</p>
             ) : (
