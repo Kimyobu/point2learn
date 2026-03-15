@@ -23,14 +23,14 @@ export async function POST(req: NextRequest) {
         const originalName = file.name.replace(/[^a-zA-Z0-9.]/g, '_'); // sanitize
         const filename = `${uniqueSuffix}-${originalName}`;
 
-        // Save to public/uploads directory
-        const uploadDir = join(process.cwd(), 'public', 'uploads');
+        // Save to central storage or local public/uploads directory
+        const uploadDir = process.env.UPLOAD_PATH || join(process.cwd(), 'public', 'uploads');
 
         // Ensure directory exists
         try {
             await mkdir(uploadDir, { recursive: true });
         } catch (e) {
-        console.error('[API Error]', e);
+            console.error('[API Error]', e);
             // Ignore if exists
         }
 
