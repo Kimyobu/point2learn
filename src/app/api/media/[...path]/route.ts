@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { join } from 'path';
 import { readFile } from 'fs/promises';
 
-export async function GET(req: NextRequest, { params }: { params: { path: string[] } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
     try {
-        const pathArray = await params.path;
-        const filename = pathArray.join('/');
+        const { path } = await params;
+        const filename = path.join('/');
 
         const uploadDir = process.env.UPLOAD_PATH || join(process.cwd(), 'public', 'uploads');
         const filepath = join(uploadDir, filename);
