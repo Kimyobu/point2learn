@@ -6,13 +6,15 @@ import { getSession } from '@/lib/auth';
 // Detect the root storage path safely
 const getStorageRoot = () => {
     if (process.env.STORAGE_PATH) return process.env.STORAGE_PATH;
-    if (process.env.UPLOAD_PATH) return join(process.env.UPLOAD_PATH, '..');
+    if (process.env.UPLOAD_PATH) {
+        // If UPLOAD_PATH is set directly, we assume that IS the root for admin files
+        // but we'll trim the /uploads part if needed to manage the parent folder
+        return process.env.UPLOAD_PATH.replace(/\/uploads\/?$/, '');
+    }
 
     // local fallback
     const localDir = join(process.cwd(), 'storage');
-    if (!fs.existsSync(localDir)) {
-        fs.mkdirSync(localDir, { recursive: true });
-    }
+    // We do NOT create the root directory lazily here anymore on top level, handled per-route
     return localDir;
 };
 

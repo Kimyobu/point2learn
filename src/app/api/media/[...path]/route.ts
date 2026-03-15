@@ -9,7 +9,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
 
         const getStorageRoot = () => {
             if (process.env.STORAGE_PATH) return process.env.STORAGE_PATH;
-            if (process.env.UPLOAD_PATH) return join(process.env.UPLOAD_PATH, '..');
+            if (process.env.UPLOAD_PATH) {
+                return process.env.UPLOAD_PATH.replace(/\/uploads\/?$/, '');
+            }
             const localDir = join(process.cwd(), 'storage');
             return localDir;
         };

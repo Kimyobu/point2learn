@@ -26,7 +26,9 @@ export async function POST(req: NextRequest) {
         // Detect the root storage path safely (same as admin/files)
         const getStorageRoot = () => {
             if (process.env.STORAGE_PATH) return process.env.STORAGE_PATH;
-            if (process.env.UPLOAD_PATH) return join(process.env.UPLOAD_PATH, '..');
+            if (process.env.UPLOAD_PATH) {
+                return process.env.UPLOAD_PATH.replace(/\/uploads\/?$/, '');
+            }
             const localDir = join(process.cwd(), 'storage');
             return localDir;
         };

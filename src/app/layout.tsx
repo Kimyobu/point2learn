@@ -1,12 +1,20 @@
 import type { Metadata } from 'next';
-import { Kanit } from 'next/font/google';
+import { Outfit, Mali } from 'next/font/google';
 import './globals.css';
 import PwaPrompt from '@/components/PwaPrompt';
 
-const kanit = Kanit({
+const outfit = Outfit({
   weight: ['300', '400', '500', '600', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-outfit',
+});
+
+const mali = Mali({
+  weight: ['400', '500', '600', '700'],
   subsets: ['thai', 'latin'],
   display: 'swap',
+  variable: '--font-mali',
 });
 
 export const metadata: Metadata = {
@@ -26,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="th" className={kanit.className}>
+    <html lang="th" className={`${outfit.variable} ${mali.variable}`}>
       <body>
         {children}
         <PwaPrompt />
