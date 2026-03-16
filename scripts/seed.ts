@@ -36,6 +36,23 @@ async function main() {
     }
 
     console.log('Seed check completed successfully.');
+
+    // Seed default TaskTypes
+    const defaultTypes = [
+        { name: 'DAILY', resetMode: 'DAILY' },
+        { name: 'ปิดเทอม', resetMode: 'NONE' },
+    ];
+    for (const t of defaultTypes) {
+        const exists = await prisma.taskType.findUnique({ where: { name: t.name } });
+        if (!exists) {
+            await prisma.taskType.create({ data: t });
+            console.log(`Created TaskType: ${t.name} (${t.resetMode})`);
+        } else {
+            console.log(`TaskType "${t.name}" already exists`);
+        }
+    }
+
+    console.log('All seeding complete.');
 }
 
 main()
@@ -47,3 +64,4 @@ main()
         await prisma.$disconnect();
         process.exit(1);
     });
+

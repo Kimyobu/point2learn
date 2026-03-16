@@ -1,33 +1,47 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 type Task = { id: string; title: string; description: string; points: number; type: string };
-type Submission = { id: string; taskId: string; status: string };
+type Submission = { id: string; taskId: string; status: string; imageUrl: string | null; createdAt: string };
+type TaskType = { id: string; name: string; resetMode: string };
 
 export default function PlayerDashboard() {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [submissions, setSubmissions] = useState<Submission[]>([]);
+    const [taskTypes, setTaskTypes] = useState<TaskType[]>([]);
     const [messages, setMessages] = useState<any[]>([]);
     const [user, setUser] = useState<any>(null);
     const [uploading, setUploading] = useState<string | null>(null);
     const [sortOption, setSortOption] = useState('NEWEST');
+    const [seenApproved, setSeenApproved] = useState(false);
 
     useEffect(() => {
+        // Check if user already saw approved quests in this session
+        const hasSeen = sessionStorage.getItem('seenApproved');
+        if (hasSeen === 'true') {
+            setSeenApproved(true);
+        } else {
+            // First visit in this session: mark as seen for next time
+            sessionStorage.setItem('seenApproved', 'true');
+        }
         fetchData();
     }, []);
 
     const fetchData = async () => {
-        const [tasksRes, subRes, msgRes, userRes] = await Promise.all([
+        const [tasksRes, subRes, msgRes, userRes, typesRes] = await Promise.all([
             fetch('/api/tasks'),
             fetch('/api/submissions'),
             fetch('/api/messages'),
-            fetch('/api/auth/me')
+            fetch('/api/auth/me'),
+            fetch('/api/task-types'),
         ]);
         if (tasksRes.ok) setTasks(await tasksRes.json());
         if (subRes.ok) setSubmissions(await subRes.json());
         if (msgRes.ok) setMessages(await msgRes.json());
         if (userRes.ok) setUser((await userRes.json()).user);
+        if (typesRes.ok) setTaskTypes(await typesRes.json());
     };
 
     const handleFileUpload = async (taskId: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,10 +63,72 @@ export default function PlayerDashboard() {
         setUploading(null);
     };
 
-    const getTaskStatus = (taskId: string) => {
-        const sub = submissions.find(s => s.taskId === taskId);
-        if (!sub) return null;
-        return sub.status; // PENDING, APPROVED, REJECTED
+    // Check if a task can be submitted based on reset mode
+    const canSubmitTask = (task: Task) => {
+        const taskType = taskTypes.find(t => t.name === task.type);
+        const resetMode = taskType?.resetMode || 'NONE';
+        const taskSubs = submissions.filter(s => s.taskId === task.id);
+
+        if (taskSubs.length === 0) return { canSubmit: true, status: null, count: 0 };
+
+        const latestSub = taskSubs[0]; // sorted by createdAt desc from API
+
+        // If latest is PENDING, always block
+        if (latestSub.status === 'PENDING') return { canSubmit: false, status: 'PENDING', count: taskSubs.length };
+
+        // NONE mode: one-time task
+        if (resetMode === 'NONE') {
+            if (latestSub.status === 'APPROVED') return { canSubmit: false, status: 'APPROVED', count: taskSubs.length };
+            if (latestSub.status === 'REJECTED') return { canSubmit: true, status: 'REJECTED', count: taskSubs.length };
+        }
+
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        // DAILY: reset every day at 00:00
+        if (resetMode === 'DAILY') {
+            const todaySubs = taskSubs.filter(s => new Date(s.createdAt) >= startOfToday);
+            if (todaySubs.length === 0) return { canSubmit: true, status: null, count: taskSubs.length };
+            const todayLatest = todaySubs[0];
+            return { canSubmit: todayLatest.status === 'REJECTED', status: todayLatest.status, count: taskSubs.length };
+        }
+
+        // EVERY_N_DAYS:N
+        if (resetMode.startsWith('EVERY_N_DAYS:')) {
+            const n = parseInt(resetMode.split(':')[1]) || 1;
+            const windowStart = new Date(now.getTime() - n * 24 * 60 * 60 * 1000);
+            const windowSubs = taskSubs.filter(s => new Date(s.createdAt) >= windowStart);
+            if (windowSubs.length === 0) return { canSubmit: true, status: null, count: taskSubs.length };
+            const wLatest = windowSubs[0];
+            return { canSubmit: wLatest.status === 'REJECTED', status: wLatest.status, count: taskSubs.length };
+        }
+
+        // N_PER_WEEK:N (N submissions per 7 days)
+        if (resetMode.startsWith('N_PER_WEEK:')) {
+            const maxPerWeek = parseInt(resetMode.split(':')[1]) || 1;
+            const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const weekSubs = taskSubs.filter(s => new Date(s.createdAt) >= weekStart && s.status !== 'REJECTED');
+            if (weekSubs.length < maxPerWeek) return { canSubmit: true, status: null, count: taskSubs.length };
+            return { canSubmit: false, status: 'COOLDOWN', count: taskSubs.length };
+        }
+
+        // N_PER_M_DAYS:N:M (N submissions per M days)
+        if (resetMode.startsWith('N_PER_M_DAYS:')) {
+            const parts = resetMode.split(':');
+            const maxN = parseInt(parts[1]) || 1;
+            const mDays = parseInt(parts[2]) || 7;
+            const windowStart = new Date(now.getTime() - mDays * 24 * 60 * 60 * 1000);
+            const windowSubs = taskSubs.filter(s => new Date(s.createdAt) >= windowStart && s.status !== 'REJECTED');
+            if (windowSubs.length < maxN) return { canSubmit: true, status: null, count: taskSubs.length };
+            return { canSubmit: false, status: 'COOLDOWN', count: taskSubs.length };
+        }
+
+        // Fallback: use latest status
+        return { canSubmit: latestSub.status === 'REJECTED', status: latestSub.status, count: taskSubs.length };
+    };
+
+    const getTaskSubmission = (taskId: string) => {
+        return submissions.find(s => s.taskId === taskId) || null;
     };
 
     const getLevelInfo = (totalPoints: number) => {
@@ -72,7 +148,21 @@ export default function PlayerDashboard() {
         return result;
     })();
 
-    const tasksByType = sortedTasks.reduce((acc, task) => {
+    // Count approved quests that are hidden (NONE mode only)
+    const approvedCount = sortedTasks.filter(t => {
+        const info = canSubmitTask(t);
+        return info.status === 'APPROVED' && !info.canSubmit;
+    }).length;
+
+    // Filter out APPROVED tasks (NONE mode) if user already saw them
+    const visibleTasks = seenApproved
+        ? sortedTasks.filter(t => {
+            const info = canSubmitTask(t);
+            return !(info.status === 'APPROVED' && !info.canSubmit);
+        })
+        : sortedTasks;
+
+    const tasksByType = visibleTasks.reduce((acc, task) => {
         if (!acc[task.type]) acc[task.type] = [];
         acc[task.type].push(task);
         return acc;
@@ -123,6 +213,14 @@ export default function PlayerDashboard() {
                 <p style={{ fontSize: '1.1rem', color: 'var(--text-main)' }}>สู้ๆ กับภารกิจวันนี้ เก็บพอยท์ไปแลกของรางวัลกันน้า 🎁</p>
             </div>
 
+            {/* Banner for hidden approved quests */}
+            {seenApproved && approvedCount > 0 && (
+                <div className="card" style={{ marginBottom: '24px', background: 'var(--success)', color: 'white', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <span style={{ fontWeight: 600 }}>✅ มี {approvedCount} ภารกิจที่สำเร็จแล้ว</span>
+                    <Link href="/player/history" style={{ color: 'white', fontWeight: 700, textDecoration: 'underline' }}>ดูได้ที่ประวัติ 📖</Link>
+                </div>
+            )}
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
                 <select
                     className="input-field"
@@ -144,23 +242,41 @@ export default function PlayerDashboard() {
                     </h2>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         {list.map(task => {
-                            const status = getTaskStatus(task.id);
+                            const taskInfo = canSubmitTask(task);
+                            const sub = getTaskSubmission(task.id);
                             return (
                                 <div key={task.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                         <div>
                                             <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-main)' }}>{task.title}</h3>
                                             {task.description && <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginTop: '4px' }}>{task.description}</p>}
+                                            {taskInfo.count > 0 && (
+                                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>ส่งแล้ว {taskInfo.count} ครั้ง</p>
+                                            )}
                                         </div>
                                         <div className="badge badge-points">+{task.points} pt</div>
                                     </div>
 
-                                    <div style={{ marginTop: '8px' }}>
-                                        {status === 'APPROVED' && <span style={{ color: 'var(--success)', fontWeight: 600 }}>✅ สำเร็จแล้วได้รับพอยท์แล้ว!</span>}
-                                        {status === 'PENDING' && <span style={{ color: '#ffb703', fontWeight: 600 }}>⏳ รอที่รักชื่นชมผลงานอยู่...</span>}
-                                        {status === 'REJECTED' && <span style={{ color: 'var(--danger)', fontWeight: 600 }}>❌ ต้องแก้นิดหน่อย ลองส่งใหม่น้า</span>}
+                                    {/* Image/PDF preview for submitted tasks */}
+                                    {sub?.imageUrl && (
+                                        <a href={sub.imageUrl} target="_blank" rel="noopener noreferrer">
+                                            {sub.imageUrl.toLowerCase().endsWith('.pdf') ? (
+                                                <iframe src={sub.imageUrl} style={{ width: '100%', height: '180px', border: '1px solid #eee', borderRadius: 'var(--radius-sm)', pointerEvents: 'none' }} title="PDF Preview" />
+                                            ) : (
+                                                <img src={sub.imageUrl} alt="หลักฐาน" loading="lazy"
+                                                    style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: 'var(--radius-md)', background: 'var(--background)' }} />
+                                            )}
+                                        </a>
+                                    )}
 
-                                        {(!status || status === 'REJECTED') && (
+                                    <div style={{ marginTop: '8px' }}>
+                                        {taskInfo.status === 'APPROVED' && !taskInfo.canSubmit && <span style={{ color: 'var(--success)', fontWeight: 600 }}>✅ สำเร็จแล้วได้รับพอยท์แล้ว!</span>}
+                                        {taskInfo.status === 'APPROVED' && taskInfo.canSubmit && <span style={{ color: 'var(--success)', fontWeight: 600 }}>✅ ส่งได้อีก!</span>}
+                                        {taskInfo.status === 'PENDING' && <span style={{ color: '#ffb703', fontWeight: 600 }}>⏳ รอที่รักชื่นชมผลงานอยู่...</span>}
+                                        {taskInfo.status === 'REJECTED' && <span style={{ color: 'var(--danger)', fontWeight: 600 }}>❌ ต้องแก้นิดหน่อย ลองส่งใหม่น้า</span>}
+                                        {taskInfo.status === 'COOLDOWN' && <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>🕐 ส่งครบโควต้าแล้ว รอรอบถัดไปน้า</span>}
+
+                                        {taskInfo.canSubmit && (
                                             <label className="btn-primary" style={{ display: 'inline-flex', padding: '10px 20px', fontSize: '0.95rem', width: 'auto', marginTop: '4px', cursor: 'pointer' }}>
                                                 {uploading === task.id ? 'กำลังส่ง...' : '📸 ส่งรูป/PDF ผลงานเลย!'}
                                                 <input

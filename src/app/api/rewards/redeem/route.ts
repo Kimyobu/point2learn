@@ -38,6 +38,18 @@ export async function POST(req: NextRequest) {
                 }
             })
 
+            // Log the redeem
+            const isGacha = reward.name.includes('สุ่ม') || reward.name.toLowerCase().includes('gacha') || reward.name.includes('กล่อง');
+            await tx.redeemLog.create({
+                data: {
+                    userId: user.id,
+                    rewardId: reward.id,
+                    rewardName: reward.name,
+                    pointsSpent: reward.pointsCost,
+                    isGacha,
+                }
+            })
+
             return { user: updatedUser, reward }
         })
 
