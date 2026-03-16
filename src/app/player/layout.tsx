@@ -16,15 +16,21 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
         async function checkAuth() {
             try {
                 const res = await apiFetch('/api/auth/me');
-                if (!res.ok) throw new Error('Not auth');
-                const data = await res.json();
-                if (data.user.role !== 'PLAYER') {
-                    router.push('/login');
-                } else {
-                    setUser(data.user);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.user?.role === 'PLAYER') {
+                        setUser(data.user);
+                        return;
+                    }
                 }
+
+                // If we get here, either auth failed permanently (refresh failed), or role mismatch
+                // apiClient.ts will handle redirecting to /login if it was a 401. 
+                // We only need to push if the role is wrong.
+                if (res.ok) router.push('/login');
+
             } catch (err) {
-                router.push('/login');
+                console.error("PlayerLayout Auth Error:", err);
             } finally {
                 setLoading(false);
             }

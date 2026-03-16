@@ -16,15 +16,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         async function checkAuth() {
             try {
                 const res = await apiFetch('/api/auth/me');
-                if (!res.ok) throw new Error('Not auth');
-                const data = await res.json();
-                if (data.user.role !== 'ADMIN') {
-                    router.push('/login');
-                } else {
-                    setUser(data.user);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.user?.role === 'ADMIN') {
+                        setUser(data.user);
+                        return;
+                    }
                 }
+
+                // apiClient handles 401 redirect. We only redirect if authenticated user isn't admin.
+                if (res.ok) router.push('/login');
+
             } catch (err) {
-                router.push('/login');
+                console.error("AdminLayout Auth Error:", err);
             } finally {
                 setLoading(false);
             }
