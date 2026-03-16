@@ -31,6 +31,7 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
     }, [pathname, router]);
 
     const handleLogout = async () => {
+        localStorage.removeItem('session_token');
         await fetch('/api/auth/logout', { method: 'POST' });
         router.push('/login');
     };

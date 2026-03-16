@@ -26,8 +26,14 @@ export async function POST(req: NextRequest) {
 
         await setSession(user.id, user.role, user.username)
 
+        // Also return token for localStorage persistence (iOS PWA)
+        const { encrypt } = await import('@/lib/auth')
+        const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        const token = await encrypt({ userId: user.id, role: user.role, username: user.username, expires })
+
         return NextResponse.json({
             success: true,
+            token,
             user: { id: user.id, username: user.username, role: user.role, points: user.points }
         })
     } catch (error) {

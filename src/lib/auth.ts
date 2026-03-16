@@ -29,14 +29,31 @@ export async function comparePassword(password: string, hash: string) {
 }
 
 export async function getSession() {
+    // 1. Try cookie first
     const cookieStore = await cookies()
     const sessionToken = cookieStore.get('session')?.value
-    if (!sessionToken) return null
-    try {
-        return await decrypt(sessionToken)
-    } catch (err) {
-        return null
+    if (sessionToken) {
+        try {
+            return await decrypt(sessionToken)
+        } catch (err) {
+            // invalid cookie, fall through
+        }
     }
+
+    // 2. Fallback: check Authorization header (for iOS PWA where cookies are lost on force close)
+    try {
+        const { headers } = await import('next/headers')
+        const headersList = await headers()
+        const authHeader = headersList.get('authorization')
+        if (authHeader?.startsWith('Bearer ')) {
+            const token = authHeader.slice(7)
+            return await decrypt(token)
+        }
+    } catch (err) {
+        // headers not available or invalid token
+    }
+
+    return null
 }
 
 export async function setSession(userId: string, role: string, username: string) {

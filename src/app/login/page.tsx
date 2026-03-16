@@ -25,6 +25,10 @@ export default function LoginPage() {
             const data = await res.json();
 
             if (res.ok) {
+                // Save token for iOS PWA persistence (cookies lost on force close)
+                if (data.token) {
+                    localStorage.setItem('session_token', data.token);
+                }
                 if (data.user.role === 'ADMIN') {
                     router.push('/admin');
                 } else {
