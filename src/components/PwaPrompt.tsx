@@ -12,7 +12,8 @@ export default function PwaPrompt() {
     useEffect(() => {
         // Detect OS
         const userAgent = window.navigator.userAgent.toLowerCase();
-        const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
+        console.log(userAgent);
+        const isIosDevice = /iphone|ipad|ipod/.test(userAgent) && !!(navigator.maxTouchPoints && (navigator.maxTouchPoints > 2));
         const isAndroidDevice = /android/.test(userAgent);
 
         setIsIOS(isIosDevice);
@@ -61,6 +62,30 @@ export default function PwaPrompt() {
         setDeferredPrompt(null);
     };
 
+    const handleShareIOS = async () => {
+        // ข้อมูลที่จะแชร์
+        const shareData = {
+            title: 'Point2Learn',
+            text: 'Point2Learn - แพลตฟอร์มเรียนรู้แบบมีส่วนร่วม',
+            url: window.location.href,
+        };
+
+        try {
+            // ตรวจสอบว่า Browser รองรับ Web Share API หรือไม่
+            if (navigator.share) {
+                await navigator.share(shareData);
+                console.log('แชร์สำเร็จ');
+            } else {
+                // กรณี Browser ไม่รองรับ (เช่น Chrome บน Desktop) 
+                // อาจจะเปลี่ยนเป็น Copy Link ลง Clipboard แทน
+                alert('ระบบไม่รองรับการแชร์อัตโนมัติ');
+            }
+        } catch (err) {
+            // กรณี User กดยกเลิก (Cancel) หรือปิดหน้าแชร์
+            console.log('User cancelled or error:', err);
+        }
+    };
+
     if (!showPrompt) return null;
 
     return (
@@ -90,7 +115,22 @@ export default function PwaPrompt() {
 
             {isIOS && (
                 <div style={{ background: 'var(--bg)', padding: '12px', borderRadius: '8px', fontSize: '0.85rem' }}>
-                    แอปเปิล (iOS): กด <b style={{ fontSize: '1.2rem' }}>⍗</b> (Share) ด้านล่าง <br />แล้วเลือก <b>"Add to Home Screen"</b> ➕
+                    แอปเปิล (iOS): กด <b style={{ fontSize: '1.2rem' }}>⍗</b> (Share) ด้านล่าง
+                    <br /> <button
+                        onClick={handleShareIOS}
+                        style={{
+                            backgroundColor: '#007AFF',
+                            color: 'white',
+                            padding: '10px 20px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        📤 แชร์หน้านี้
+                    </button>
+                    <br />แล้วเลือก <b>"Add to Home Screen"</b> ➕
                 </div>
             )}
 

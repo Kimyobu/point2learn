@@ -1,16 +1,78 @@
 'use client';
 import { apiFetch } from '@/lib/apiClient';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { saveToken } from '@/lib/sessionDB';
+import { saveToken, getToken, clearToken } from '@/lib/sessionDB';
 
 export default function LoginPage() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [checkingAuth, setCheckingAuth] = useState(true);
     const router = useRouter();
+
+    // ตรวจ session ก่อนแสดง login form
+    useEffect(() => {
+        const checkExistingSession = async () => {
+            try {
+                const stored = localStorage.getItem('session_token');
+
+                // ลอง check session ด้วย access token ที่มีอยู่
+                const res = await fetch('/api/auth/me', {
+                    headers: stored ? { 'Authorization': `Bearer ${stored}` } : {}
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.isAuthenticated && data.user) {
+                        // Session ยังดีอยู่ → redirect เลย
+                        if (data.user.role === 'ADMIN') {
+                            router.replace('/admin');
+                        } else {
+                            router.replace('/player');
+                        }
+                        return;
+                    }
+                }
+
+                // Access token หมดอายุ → ลอง silent refresh ด้วย refresh token จาก IndexedDB
+                const refreshToken = await getToken();
+                if (refreshToken) {
+                    const refreshRes = await fetch('/api/auth/refresh', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ refreshToken }),
+                    });
+
+                    if (refreshRes.ok) {
+                        const refreshData = await refreshRes.json();
+                        await saveToken(refreshData.refreshToken);
+                        localStorage.setItem('session_token', refreshData.accessToken);
+
+                        if (refreshData.user?.role === 'ADMIN') {
+                            router.replace('/admin');
+                        } else {
+                            router.replace('/player');
+                        }
+                        return;
+                    } else {
+                        // Refresh token หมดอายุ → ล้างทิ้ง
+                        await clearToken();
+                        localStorage.removeItem('session_token');
+                    }
+                }
+            } catch (e) {
+                // network error หรือ offline — แสดง login form ตามปกติ
+            } finally {
+                setCheckingAuth(false);
+            }
+        };
+
+        checkExistingSession();
+    }, [router]);
+
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -49,6 +111,14 @@ export default function LoginPage() {
             setLoading(false);
         }
     };
+
+    if (checkingAuth) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+                <div style={{ fontSize: '2rem', opacity: 0.5 }}>✨</div>
+            </div>
+        );
+    }
 
     return (
         <div style={{

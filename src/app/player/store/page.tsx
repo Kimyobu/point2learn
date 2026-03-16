@@ -2,27 +2,19 @@
 import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
+import { usePlayerUser } from '@/context/PlayerUser';
 
 type Reward = { id: string; name: string; description: string; pointsCost: number; imageUrl: string | null };
 
 export default function StorePage() {
+    const { user } = usePlayerUser();
     const [rewards, setRewards] = useState<Reward[]>([]);
     const [redeeming, setRedeeming] = useState<string | null>(null);
     const [gachaAnimating, setGachaAnimating] = useState<string | null>(null);
-    const [userPoints, setUserPoints] = useState<number>(0);
 
     useEffect(() => {
         fetchRewards();
-        fetchUser();
     }, []);
-
-    const fetchUser = async () => {
-        const res = await apiFetch('/api/auth/me');
-        if (res.ok) {
-            const data = await res.json();
-            setUserPoints(data.user?.points || 0);
-        }
-    };
 
     const fetchRewards = async () => {
         const res = await apiFetch('/api/rewards');
@@ -104,12 +96,12 @@ export default function StorePage() {
                             {reward.description && <p style={{ color: 'var(--text-muted)', flex: 1, marginBottom: '16px' }}>{reward.description}</p>}
 
                             <button
-                                className={userPoints >= reward.pointsCost ? "btn-primary" : "btn-secondary"}
+                                className={(user?.points ?? 0) >= reward.pointsCost ? "btn-primary" : "btn-secondary"}
                                 onClick={() => handleRedeem(reward)}
-                                disabled={redeeming === reward.id || isAnimating || userPoints < reward.pointsCost}
-                                style={{ marginTop: 'auto', opacity: userPoints < reward.pointsCost ? 0.6 : 1, cursor: userPoints < reward.pointsCost ? 'not-allowed' : 'pointer' }}
+                                disabled={redeeming === reward.id || isAnimating || (user?.points ?? 0) < reward.pointsCost}
+                                style={{ marginTop: 'auto', opacity: (user?.points ?? 0) < reward.pointsCost ? 0.6 : 1, cursor: (user?.points ?? 0) < reward.pointsCost ? 'not-allowed' : 'pointer' }}
                             >
-                                {isAnimating ? 'กำลังสุ่ม...' : redeeming === reward.id ? 'กำลังแลก...' : userPoints < reward.pointsCost ? `พอยท์ไม่พอ (-${reward.pointsCost} pt)` : `แลกเลย! (-${reward.pointsCost} pt)`}
+                                {isAnimating ? 'กำลังสุ่ม...' : redeeming === reward.id ? 'กำลังแลก...' : (user?.points ?? 0) < reward.pointsCost ? `พอยท์ไม่พอ (-${reward.pointsCost} pt)` : `แลกเลย! (-${reward.pointsCost} pt)`}
                             </button>
                         </div>
                     );

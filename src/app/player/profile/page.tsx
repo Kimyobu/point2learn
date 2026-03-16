@@ -2,10 +2,12 @@
 import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
+import { usePlayerUser } from '@/context/PlayerUser';
 
 const EMOJI_LIST = ['🐶', '🐱', '🐰', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐣', '🦄', '🐝', '🐛', '🦋', '🐢', '🐙', '🐬', '🐳', '🦖', '🐉', '👽', '👾', '🤖', '💩', '👻', '💀'];
 
 export default function ProfilePage() {
+    const { user: ctxUser, refreshUser } = usePlayerUser();
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -25,22 +27,16 @@ export default function ProfilePage() {
     const [newPassword, setNewPassword] = useState('');
 
     useEffect(() => {
-        fetchUser();
-    }, []);
-
-    const fetchUser = async () => {
-        const res = await apiFetch('/api/auth/me');
-        if (res.ok) {
-            const data = await res.json();
-            setUser(data.user);
-            setAvatarUrl(data.user.avatarUrl || '');
-            setAvatarBg(data.user.avatarBg || 'var(--primary-light)');
-            setThemeColor(data.user.themeColor || '#FF8BA7');
-            setDisplayName(data.user.displayName || '');
-            setUsername(data.user.username || '');
+        if (ctxUser) {
+            setUser(ctxUser);
+            setAvatarUrl(ctxUser.avatarUrl || '');
+            setAvatarBg(ctxUser.avatarBg || 'var(--primary-light)');
+            setThemeColor(ctxUser.themeColor || '#FF8BA7');
+            setDisplayName(ctxUser.displayName || '');
+            setUsername(ctxUser.username || '');
+            setLoading(false);
         }
-        setLoading(false);
-    };
+    }, [ctxUser]);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -89,6 +85,7 @@ export default function ProfilePage() {
         const data = await res.json();
         if (res.ok) {
             alert('บันทึกโปรไฟล์สำเร็จ! (สีธีมจะเปลี่ยนหลังจากรีเฟรชหน้าเว็บนะคะ)');
+            await refreshUser(); // อัปเดต layout header
             window.location.reload();
         } else {
             alert(data.error || 'เกิดข้อผิดพลาดในการบันทึกโปรไฟล์');

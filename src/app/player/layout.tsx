@@ -1,42 +1,40 @@
 'use client';
 import { apiFetch } from '@/lib/apiClient';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { getToken, clearToken } from '@/lib/sessionDB';
+import { PlayerUserContext, type PlayerUser } from '@/context/PlayerUser';
 
 export default function PlayerLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<PlayerUser | null>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        async function checkAuth() {
-            try {
-                const res = await apiFetch('/api/auth/me');
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.user?.role === 'PLAYER') {
-                        setUser(data.user);
-                        return;
-                    }
+    const fetchUser = useCallback(async () => {
+        try {
+            const res = await apiFetch('/api/auth/me');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.user?.role === 'PLAYER') {
+                    setUser(data.user);
+                    return;
                 }
-
-                // If we get here, either auth failed permanently (refresh failed), or role mismatch
-                // apiClient.ts will handle redirecting to /login if it was a 401. 
-                // We only need to push if the role is wrong.
-                if (res.ok) router.push('/login');
-
-            } catch (err) {
-                console.error("PlayerLayout Auth Error:", err);
-            } finally {
-                setLoading(false);
             }
+            // authenticated but wrong role, or refresh failed (apiFetch handles 401 redirect)
+            if (res.ok) router.push('/login');
+        } catch (err) {
+            console.error('PlayerLayout Auth Error:', err);
+        } finally {
+            setLoading(false);
         }
-        checkAuth();
-    }, [pathname, router]);
+    }, [router]);
+
+    useEffect(() => {
+        fetchUser();
+    }, [fetchUser]);
 
     const handleLogout = async () => {
         const refreshToken = await getToken();
@@ -53,7 +51,6 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
         return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading... 💖</div>;
     }
 
-    // Inject user into children context by cloning or we can just render the layout Nav
     const themeStyle = user?.themeColor ? {
         '--primary': user.themeColor,
         '--primary-dark': user.themeColor,
@@ -78,39 +75,41 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
     const displayUsername = user?.displayName || user?.username || 'Player';
 
     return (
-        <div style={{ ...themeStyle, maxWidth: '1000px', margin: '0 auto', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-            <header style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '20px 24px', background: 'var(--surface)',
-                borderBottomLeftRadius: 'var(--radius-lg)', borderBottomRightRadius: 'var(--radius-lg)',
-                boxShadow: 'var(--shadow-sm)', position: 'sticky', top: 0, zIndex: 10,
-                flexWrap: 'wrap', gap: '16px'
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div className="title" style={{ fontSize: '1.5rem', cursor: 'pointer' }} onClick={() => router.push('/player')}>P2L 💖</div>
-                    <div className="badge badge-points">คะแนน: {user.points ?? 0} pt</div>
-                </div>
-                <nav style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
-                    <Link href="/player" style={getLinkStyle('/player')}>ภารกิจ 📝</Link>
-                    <Link href="/player/history" style={getLinkStyle('/player/history')}>ประวัติ 📖</Link>
-                    <Link href="/player/store" style={getLinkStyle('/player/store')}>ร้านค้า 🎁</Link>
-                    <Link href="/player/profile" style={getLinkStyle('/player/profile')}>
-                        {displayUsername}
-                        {user.avatarUrl ? (
-                            <img src={user.avatarUrl} alt="avatar" style={{ width: 24, height: 24, borderRadius: '50%', display: 'inline-block', verticalAlign: 'middle', background: user.avatarBg || 'transparent' }} />
-                        ) : (
-                            <div style={{ width: 24, height: 24, borderRadius: '50%', background: user.avatarBg || 'var(--primary-light)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', verticalAlign: 'middle' }}>👤</div>
-                        )}
-                    </Link>
-                    <button onClick={handleLogout} style={{ ...getLinkStyle(''), color: 'var(--danger)', marginLeft: '8px', minWidth: 'max-content' }}>
-                        ออกระบบ
-                    </button>
-                </nav>
-            </header>
+        <PlayerUserContext.Provider value={{ user, refreshUser: fetchUser }}>
+            <div style={{ ...themeStyle, maxWidth: '1000px', margin: '0 auto', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+                <header style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '20px 24px', background: 'var(--surface)',
+                    borderBottomLeftRadius: 'var(--radius-lg)', borderBottomRightRadius: 'var(--radius-lg)',
+                    boxShadow: 'var(--shadow-sm)', position: 'sticky', top: 0, zIndex: 10,
+                    flexWrap: 'wrap', gap: '16px'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div className="title" style={{ fontSize: '1.5rem', cursor: 'pointer' }} onClick={() => router.push('/player')}>P2L 💖</div>
+                        <div className="badge badge-points">คะแนน: {user.points ?? 0} pt</div>
+                    </div>
+                    <nav style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                        <Link href="/player" style={getLinkStyle('/player')}>ภารกิจ 📝</Link>
+                        <Link href="/player/history" style={getLinkStyle('/player/history')}>ประวัติ 📖</Link>
+                        <Link href="/player/store" style={getLinkStyle('/player/store')}>ร้านค้า 🎁</Link>
+                        <Link href="/player/profile" style={getLinkStyle('/player/profile')}>
+                            {displayUsername}
+                            {user.avatarUrl ? (
+                                <img src={user.avatarUrl} alt="avatar" style={{ width: 24, height: 24, borderRadius: '50%', display: 'inline-block', verticalAlign: 'middle', background: user.avatarBg || 'transparent' }} />
+                            ) : (
+                                <div style={{ width: 24, height: 24, borderRadius: '50%', background: user.avatarBg || 'var(--primary-light)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', verticalAlign: 'middle' }}>👤</div>
+                            )}
+                        </Link>
+                        <button onClick={handleLogout} style={{ ...getLinkStyle(''), color: 'var(--danger)', marginLeft: '8px', minWidth: 'max-content' }}>
+                            ออกระบบ
+                        </button>
+                    </nav>
+                </header>
 
-            <main style={{ flex: 1, padding: '24px' }}>
-                {children}
-            </main>
-        </div>
+                <main style={{ flex: 1, padding: '24px' }}>
+                    {children}
+                </main>
+            </div>
+        </PlayerUserContext.Provider>
     );
 }

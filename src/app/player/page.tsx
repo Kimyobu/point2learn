@@ -3,17 +3,18 @@ import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePlayerUser } from '@/context/PlayerUser';
 
 type Task = { id: string; title: string; description: string; points: number; type: string };
 type Submission = { id: string; taskId: string; status: string; imageUrl: string | null; createdAt: string };
 type TaskType = { id: string; name: string; resetMode: string };
 
 export default function PlayerDashboard() {
+    const { user } = usePlayerUser();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [submissions, setSubmissions] = useState<Submission[]>([]);
     const [taskTypes, setTaskTypes] = useState<TaskType[]>([]);
     const [messages, setMessages] = useState<any[]>([]);
-    const [user, setUser] = useState<any>(null);
     const [uploading, setUploading] = useState<string | null>(null);
     const [sortOption, setSortOption] = useState('NEWEST');
     const [seenApproved, setSeenApproved] = useState(false);
@@ -31,17 +32,15 @@ export default function PlayerDashboard() {
     }, []);
 
     const fetchData = async () => {
-        const [tasksRes, subRes, msgRes, userRes, typesRes] = await Promise.all([
+        const [tasksRes, subRes, msgRes, typesRes] = await Promise.all([
             apiFetch('/api/tasks'),
             apiFetch('/api/submissions'),
             apiFetch('/api/messages'),
-            apiFetch('/api/auth/me'),
             apiFetch('/api/task-types'),
         ]);
         if (tasksRes.ok) setTasks(await tasksRes.json());
         if (subRes.ok) setSubmissions(await subRes.json());
         if (msgRes.ok) setMessages(await msgRes.json());
-        if (userRes.ok) setUser((await userRes.json()).user);
         if (typesRes.ok) setTaskTypes(await typesRes.json());
     };
 
