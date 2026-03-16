@@ -3,6 +3,7 @@ import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
 import { usePlayerUser } from '@/context/PlayerUser';
+import AngPaoOverlay from '@/components/AngPaoOverlay';
 
 type Reward = { id: string; name: string; description: string; pointsCost: number; imageUrl: string | null };
 
@@ -11,6 +12,11 @@ export default function StorePage() {
     const [rewards, setRewards] = useState<Reward[]>([]);
     const [redeeming, setRedeeming] = useState<string | null>(null);
     const [gachaAnimating, setGachaAnimating] = useState<string | null>(null);
+
+    // Ang Pao state
+    const [angPaoVisible, setAngPaoVisible] = useState(false);
+    const [angPaoPoints, setAngPaoPoints] = useState<number | undefined>(undefined);
+    const [angPaoMessage, setAngPaoMessage] = useState<string | undefined>(undefined);
 
     useEffect(() => {
         fetchRewards();
@@ -22,13 +28,18 @@ export default function StorePage() {
     };
 
     const handleRedeem = async (reward: Reward) => {
-        const isGacha = reward.name.includes('สุ่ม') || reward.name.toLowerCase().includes('gacha') || reward.name.includes('กล่อง');
+        const isAngPao = reward.name.includes('อั่งเปา') || reward.name.includes('angpao') || reward.name.toLowerCase().includes('ang pao');
+        const isGacha = !isAngPao && (reward.name.includes('สุ่ม') || reward.name.toLowerCase().includes('gacha') || reward.name.includes('กล่อง'));
 
-        if (!confirm(isGacha ? `ใช้ ${reward.pointsCost} pt เพื่อเปิด ${reward.name} ลุ้นของรางวัลใช่ไหมคะ? 🎲` : `ต้องการแลก ${reward.name} ด้วย ${reward.pointsCost} pt ใช่ไหมคะ?`)) return;
+        if (!confirm(isAngPao
+            ? `ใช้ ${reward.pointsCost} pt เพื่อเปิดซองอั่งเปา 🧧 ใช่ไหมคะ?`
+            : isGacha
+                ? `ใช้ ${reward.pointsCost} pt เพื่อเปิด ${reward.name} ลุ้นของรางวัลใช่ไหมคะ? 🎲`
+                : `ต้องการแลก ${reward.name} ด้วย ${reward.pointsCost} pt ใช่ไหมคะ?`)
+        ) return;
 
         if (isGacha) {
             setGachaAnimating(reward.id);
-            // Play fake animation wait for 2.5s
             await new Promise(r => setTimeout(r, 2500));
             setGachaAnimating(null);
         }
@@ -42,8 +53,17 @@ export default function StorePage() {
 
         const data = await res.json();
         if (res.ok) {
-            alert(isGacha ? `🎉 ปิ๊งป๊องงงง! คุณเปิดได้รางวัล... ไปทวงกับที่รักเลย! \nพอยท์คงเหลือ: ${data.pointsRemaining} pt` : `🎉 แลกรางวัลสำเร็จ! ${data.message} \nพอยท์คงเหลือ: ${data.pointsRemaining} pt`);
-            window.location.reload(); // Reload to refresh user points in layout
+            if (isAngPao) {
+                // แสดง overlay อั่งเปา
+                setAngPaoPoints(data.pointsRemaining !== undefined ? undefined : undefined);
+                setAngPaoMessage(data.message || `ได้รับ ${reward.name} แล้ว! ไปทวงกับที่รักเลย 💖`);
+                setAngPaoVisible(true);
+            } else {
+                alert(isGacha
+                    ? `🎉 ปิ๊งป๊องงงง! คุณเปิดได้รางวัล... ไปทวงกับที่รักเลย! \nพอยท์คงเหลือ: ${data.pointsRemaining} pt`
+                    : `🎉 แลกรางวัลสำเร็จ! ${data.message} \nพอยท์คงเหลือ: ${data.pointsRemaining} pt`);
+                window.location.reload();
+            }
         } else {
             alert(data.error || 'พอยท์ไม่พอ หรือเกิดข้อผิดพลาดค่ะ');
         }
@@ -71,7 +91,16 @@ export default function StorePage() {
                     animation: shake 0.5s;
                     animation-iteration-count: infinite;
                 }
+                @keyframes angpao-glow {
+                    0%,100% { box-shadow: 0 0 10px 2px rgba(220,0,0,0.4), 0 4px 24px rgba(0,0,0,0.2); }
+                    50%     { box-shadow: 0 0 28px 8px rgba(255,200,0,0.7), 0 4px 24px rgba(0,0,0,0.2); }
+                }
+                .angpao-card {
+                    animation: angpao-glow 1.8s ease-in-out infinite;
+                    border: 2px solid #d00000 !important;
+                }
             `}} />
+
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                 <h1 className="title" style={{ fontSize: '2.5rem' }}>🎁 ร้านค้าเปิดแล้ว! 🎁</h1>
                 <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>ใช้พอยท์ที่สะสมมา แลกของรางวัลสุดพิเศษจากที่รักได้เลย</p>
@@ -82,31 +111,92 @@ export default function StorePage() {
                     <p style={{ textAlign: 'center', width: '100%', color: 'var(--text-muted)' }}>ตอนนี้ยังไม่มีของรางวัลน้า รอสิ้นเดือนนะคะ 💕</p>
                 ) : rewards.map(reward => {
                     const isAnimating = gachaAnimating === reward.id;
+                    const isAngPao = reward.name.includes('อั่งเปา') || reward.name.includes('angpao') || reward.name.toLowerCase().includes('ang pao');
                     return (
-                        <div key={reward.id} className={`card ${isAnimating ? 'gacha-shake' : ''}`} style={{ display: 'flex', flexDirection: 'column', height: '100%', border: isAnimating ? '3px solid var(--primary)' : 'none' }}>
+                        <div
+                            key={reward.id}
+                            className={`card ${isAnimating ? 'gacha-shake' : ''} ${isAngPao ? 'angpao-card' : ''}`}
+                            style={{ display: 'flex', flexDirection: 'column', height: '100%', border: isAnimating ? '3px solid var(--primary)' : undefined }}
+                        >
+                            {/* รูป / placeholder */}
                             {reward.imageUrl ? (
                                 <img src={reward.imageUrl} alt={reward.name} style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: 'var(--radius-md) var(--radius-md) 0 0', marginBottom: '16px' }} loading="lazy" />
                             ) : (
-                                <div style={{ width: '100%', height: '150px', background: 'var(--secondary-light)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', marginBottom: '16px' }}>
-                                    {isAnimating ? '🎲' : '🎁'}
+                                <div style={{
+                                    width: '100%', height: '150px',
+                                    background: isAngPao
+                                        ? 'linear-gradient(135deg, #b30000 0%, #e60000 40%, #d4a000 100%)'
+                                        : 'var(--secondary-light)',
+                                    borderRadius: 'var(--radius-md)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: '3.5rem', marginBottom: '16px',
+                                    position: 'relative', overflow: 'hidden',
+                                }}>
+                                    {isAngPao ? (
+                                        <>
+                                            <span style={{ fontSize: '4rem', filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.4))' }}>🧧</span>
+                                            {/* ลายประดับ */}
+                                            <span style={{ position: 'absolute', top: 6, right: 10, fontSize: '1.2rem', opacity: 0.7 }}>✨</span>
+                                            <span style={{ position: 'absolute', bottom: 6, left: 10, fontSize: '1.2rem', opacity: 0.7 }}>💛</span>
+                                        </>
+                                    ) : (
+                                        isAnimating ? '🎲' : '🎁'
+                                    )}
                                 </div>
                             )}
 
-                            <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--primary-dark)', marginBottom: '4px' }}>{reward.name}</h3>
+                            {/* badge พิเศษ */}
+                            {isAngPao && (
+                                <div style={{
+                                    background: 'linear-gradient(90deg, #d00000, #d4a000)',
+                                    color: 'white', fontSize: '0.75rem', fontWeight: 800,
+                                    padding: '3px 10px', borderRadius: 20, alignSelf: 'flex-start',
+                                    marginBottom: 6, letterSpacing: 1,
+                                }}>
+                                    ✨ ไอเทมพิเศษ
+                                </div>
+                            )}
+
+                            <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: isAngPao ? '#8b0000' : 'var(--primary-dark)', marginBottom: '4px' }}>
+                                {reward.name}
+                            </h3>
                             {reward.description && <p style={{ color: 'var(--text-muted)', flex: 1, marginBottom: '16px' }}>{reward.description}</p>}
 
                             <button
-                                className={(user?.points ?? 0) >= reward.pointsCost ? "btn-primary" : "btn-secondary"}
+                                className={(user?.points ?? 0) >= reward.pointsCost ? 'btn-primary' : 'btn-secondary'}
                                 onClick={() => handleRedeem(reward)}
                                 disabled={redeeming === reward.id || isAnimating || (user?.points ?? 0) < reward.pointsCost}
-                                style={{ marginTop: 'auto', opacity: (user?.points ?? 0) < reward.pointsCost ? 0.6 : 1, cursor: (user?.points ?? 0) < reward.pointsCost ? 'not-allowed' : 'pointer' }}
+                                style={{
+                                    marginTop: 'auto',
+                                    opacity: (user?.points ?? 0) < reward.pointsCost ? 0.6 : 1,
+                                    cursor: (user?.points ?? 0) < reward.pointsCost ? 'not-allowed' : 'pointer',
+                                    ...(isAngPao && (user?.points ?? 0) >= reward.pointsCost ? {
+                                        background: 'linear-gradient(90deg, #c00000, #d4a000)',
+                                        border: 'none',
+                                    } : {}),
+                                }}
                             >
-                                {isAnimating ? 'กำลังสุ่ม...' : redeeming === reward.id ? 'กำลังแลก...' : (user?.points ?? 0) < reward.pointsCost ? `พอยท์ไม่พอ (-${reward.pointsCost} pt)` : `แลกเลย! (-${reward.pointsCost} pt)`}
+                                {isAnimating ? 'กำลังสุ่ม...' :
+                                    redeeming === reward.id ? 'กำลังเปิดซอง...' :
+                                        (user?.points ?? 0) < reward.pointsCost ? `พอยท์ไม่พอ (-${reward.pointsCost} pt)` :
+                                            isAngPao ? `🧧 เปิดซองอั่งเปา! (-${reward.pointsCost} pt)` :
+                                                `แลกเลย! (-${reward.pointsCost} pt)`}
                             </button>
                         </div>
                     );
                 })}
             </div>
+
+            {/* Ang Pao overlay */}
+            <AngPaoOverlay
+                visible={angPaoVisible}
+                pointsReceived={angPaoPoints}
+                message={angPaoMessage}
+                onClose={() => {
+                    setAngPaoVisible(false);
+                    window.location.reload();
+                }}
+            />
         </div>
     );
 }
