@@ -51,7 +51,16 @@ export async function POST(req: NextRequest) {
             const bytes = await file.arrayBuffer()
             const buffer = Buffer.from(bytes)
 
-            const uploadDir = join(process.cwd(), 'public/uploads')
+            // Use same storage root as upload/route.ts
+            const getStorageRoot = () => {
+                if (process.env.STORAGE_PATH) return process.env.STORAGE_PATH
+                if (process.env.UPLOAD_PATH) {
+                    return process.env.UPLOAD_PATH.replace(/\/uploads\/?$/, '')
+                }
+                return join(process.cwd(), 'storage')
+            }
+
+            const uploadDir = join(getStorageRoot(), 'uploads')
             if (!existsSync(uploadDir)) {
                 await mkdir(uploadDir, { recursive: true })
             }
