@@ -220,7 +220,6 @@ export default function StorePage() {
                 message={angPaoMessage}
                 onClose={() => {
                     setAngPaoVisible(false);
-                    window.location.reload();
                 }}
             />
         </div>
