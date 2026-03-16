@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
 
@@ -28,7 +29,7 @@ export default function ProfilePage() {
     }, []);
 
     const fetchUser = async () => {
-        const res = await fetch('/api/auth/me');
+        const res = await apiFetch('/api/auth/me');
         if (res.ok) {
             const data = await res.json();
             setUser(data.user);
@@ -49,7 +50,7 @@ export default function ProfilePage() {
         const formData = new FormData();
         formData.append('file', file);
 
-        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
         const data = await res.json();
 
         if (res.ok) {
@@ -79,7 +80,7 @@ export default function ProfilePage() {
         // Our api now safely extracts it via `avatarUrl: avatarUrl !== undefined ? avatarUrl : undefined`.
         payload.avatarUrl = avatarUrl || null;
 
-        const res = await fetch('/api/users', {
+        const res = await apiFetch('/api/users', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -98,7 +99,7 @@ export default function ProfilePage() {
     const handleUpdatePassword = async (e: React.FormEvent) => {
         e.preventDefault();
         setPassSaving(true);
-        const res = await fetch('/api/users/password', {
+        const res = await apiFetch('/api/users/password', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ oldPassword, newPassword })

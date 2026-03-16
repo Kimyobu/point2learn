@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
 
@@ -15,7 +16,7 @@ export default function AccountManagerPage() {
     }, []);
 
     const fetchUsers = async () => {
-        const res = await fetch('/api/users');
+        const res = await apiFetch('/api/users');
         if (res.ok) {
             const data = await res.json();
             setUsers(data);
@@ -28,7 +29,7 @@ export default function AccountManagerPage() {
         if (!selectedUserId || !newPassword) return;
 
         setLoading(true);
-        const res = await fetch('/api/users/password', {
+        const res = await apiFetch('/api/users/password', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: selectedUserId, newPassword })

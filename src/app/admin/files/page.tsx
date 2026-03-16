@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
 
@@ -22,7 +23,7 @@ export default function FileExplorerPage() {
     const fetchFolder = async (folderPath: string) => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/admin/files?path=${encodeURIComponent(folderPath)}`);
+            const res = await apiFetch(`/api/admin/files?path=${encodeURIComponent(folderPath)}`);
             if (res.ok) {
                 const data = await res.json();
                 setItems(data.items);
@@ -53,7 +54,7 @@ export default function FileExplorerPage() {
         if (!confirm(`ยืนยันลบ ${itemName} ถาวรหรือไม่?`)) return;
 
         const targetPath = path ? `${path}/${itemName}` : itemName;
-        const res = await fetch(`/api/admin/files?path=${encodeURIComponent(targetPath)}`, { method: 'DELETE' });
+        const res = await apiFetch(`/api/admin/files?path=${encodeURIComponent(targetPath)}`, { method: 'DELETE' });
 
         if (res.ok) {
             fetchFolder(path);
@@ -72,7 +73,7 @@ export default function FileExplorerPage() {
         formData.append('file', file);
         formData.append('path', path);
 
-        const res = await fetch('/api/admin/files', { method: 'POST', body: formData });
+        const res = await apiFetch('/api/admin/files', { method: 'POST', body: formData });
         if (res.ok) {
             fetchFolder(path);
         } else {
@@ -91,7 +92,7 @@ export default function FileExplorerPage() {
         formData.append('folderName', folderName);
         formData.append('path', path);
 
-        const res = await fetch('/api/admin/files', { method: 'POST', body: formData });
+        const res = await apiFetch('/api/admin/files', { method: 'POST', body: formData });
         if (res.ok) {
             fetchFolder(path);
         } else {

@@ -5,15 +5,15 @@ import { useRouter, usePathname } from 'next/navigation';
 import { getToken, saveToken, clearToken } from '@/lib/sessionDB';
 
 /**
- * AuthProvider — Persistent iOS PWA Session
- *
- * 1. Patches global fetch to attach accessToken as Authorization header
- * 2. Listens to `visibilitychange` to rehydrate session when app resumes
- * 3. Uses IndexedDB (via sessionDB) for persistent refreshToken storage
- * 4. Graceful failover: redirect to /login if refresh fails
+ * SessionProvider (Replaces AuthProvider)
+ * 
+ * 1. NO LONGER patches global fetch (which breaks Next.js App Router).
+ * 2. Only listens to `visibilitychange` to eagerly rehydrate session when app resumes.
+ * 3. Graceful failover: redirect to /login if refresh fails.
+ * 
+ * NOTE: For API calls, components must now use `apiFetch` from `@/lib/apiClient` instead of `fetch`.
  */
-export default function AuthProvider({ children }: { children: React.ReactNode }) {
-    const accessTokenRef = useRef<string | null>(null);
+export default function SessionProvider({ children }: { children: React.ReactNode }) {
     const isRefreshingRef = useRef(false);
     const router = useRouter();
     const pathname = usePathname();
@@ -30,7 +30,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
                 return false;
             }
 
-            const res = await window._originalFetch('/api/auth/refresh', {
+            const res = await fetch('/api/auth/refresh', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ refreshToken }),
@@ -44,68 +44,33 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
             }
 
             const data = await res.json();
-            accessTokenRef.current = data.accessToken;
-            await saveToken(data.refreshToken);
 
-            // Also keep in localStorage as additional fallback
-            try { localStorage.setItem('session_token', data.accessToken); } catch (e) { }
+            // Save new tokens
+            await saveToken(data.refreshToken);
+            localStorage.setItem('session_token', data.accessToken);
 
             isRefreshingRef.current = false;
             return true;
         } catch (e) {
-            console.warn('[AuthProvider] silentRefresh failed:', e);
+            console.warn('[SessionProvider] silentRefresh failed:', e);
             isRefreshingRef.current = false;
             return false;
         }
     }, []);
 
     useEffect(() => {
-        // Store original fetch before any patching
-        if (!window._originalFetch) {
-            window._originalFetch = window.fetch.bind(window);
-        }
-        const originalFetch = window._originalFetch;
-
-        // Patch global fetch to attach accessToken
-        window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-            const token = accessTokenRef.current || localStorage.getItem('session_token');
-
-            if (token) {
-                const headers = new Headers(init?.headers);
-                if (!headers.has('Authorization')) {
-                    headers.set('Authorization', `Bearer ${token}`);
-                }
-                init = { ...init, headers };
-            }
-
-            const response = await originalFetch(input, init);
-
-            // If we get a 401 on an API call, try silent refresh once
-            if (response.status === 401 && typeof input === 'string' && input.startsWith('/api/') && !input.includes('/auth/refresh')) {
-                const refreshed = await silentRefresh();
-                if (refreshed) {
-                    // Retry the original request with new token
-                    const retryHeaders = new Headers(init?.headers);
-                    retryHeaders.set('Authorization', `Bearer ${accessTokenRef.current}`);
-                    return originalFetch(input, { ...init, headers: retryHeaders });
-                }
-            }
-
-            return response;
-        };
-
-        // Initialize: try to load accessToken from localStorage, then validate
+        // Initialize: try to load session on boot
         const initSession = async () => {
             const stored = localStorage.getItem('session_token');
-            if (stored) {
-                accessTokenRef.current = stored;
-            }
 
-            // Check if session is still valid
             try {
-                const res = await window.fetch('/api/auth/me');
+                // Test session health (use standard fetch to avoid loop if apiFetch is used)
+                const res = await fetch('/api/auth/me', {
+                    headers: stored ? { 'Authorization': `Bearer ${stored}` } : {}
+                });
+
                 if (!res.ok) {
-                    // Session expired — try silent refresh
+                    // Session expired or missing — try silent refresh
                     const refreshed = await silentRefresh();
                     if (!refreshed && pathname !== '/login' && pathname !== '/') {
                         router.push('/login');
@@ -116,15 +81,14 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
             }
         };
 
-        // visibilitychange: rehydrate when app comes back
+        // visibilitychange: rehydrate when app comes back from background (PWA behavior)
         const handleVisibilityChange = async () => {
             if (document.visibilityState === 'visible') {
-                // Test session health
+                const stored = localStorage.getItem('session_token');
+
                 try {
-                    const res = await originalFetch('/api/auth/me', {
-                        headers: accessTokenRef.current
-                            ? { 'Authorization': `Bearer ${accessTokenRef.current}` }
-                            : {},
+                    const res = await fetch('/api/auth/me', {
+                        headers: stored ? { 'Authorization': `Bearer ${stored}` } : {},
                     });
 
                     if (!res.ok) {
@@ -141,23 +105,15 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
         document.addEventListener('visibilitychange', handleVisibilityChange);
 
-        // Don't init session on login page
+        // Don't init session on login page or landing page
         if (pathname !== '/login' && pathname !== '/') {
             initSession();
         }
 
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
-            window.fetch = originalFetch;
         };
     }, [silentRefresh, pathname, router]);
 
     return <>{children}</>;
-}
-
-// Extend Window to store original fetch
-declare global {
-    interface Window {
-        _originalFetch: typeof fetch;
-    }
 }

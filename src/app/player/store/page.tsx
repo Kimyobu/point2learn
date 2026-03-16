@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
 
@@ -16,7 +17,7 @@ export default function StorePage() {
     }, []);
 
     const fetchUser = async () => {
-        const res = await fetch('/api/auth/me');
+        const res = await apiFetch('/api/auth/me');
         if (res.ok) {
             const data = await res.json();
             setUserPoints(data.user?.points || 0);
@@ -24,7 +25,7 @@ export default function StorePage() {
     };
 
     const fetchRewards = async () => {
-        const res = await fetch('/api/rewards');
+        const res = await apiFetch('/api/rewards');
         if (res.ok) setRewards(await res.json());
     };
 
@@ -41,7 +42,7 @@ export default function StorePage() {
         }
 
         setRedeeming(reward.id);
-        const res = await fetch('/api/rewards/redeem', {
+        const res = await apiFetch('/api/rewards/redeem', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ rewardId: reward.id })

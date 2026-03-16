@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
 
@@ -17,7 +18,7 @@ export default function SubmissionReviewPage() {
     }, []);
 
     const fetchSubmissions = async () => {
-        const res = await fetch('/api/submissions');
+        const res = await apiFetch('/api/submissions');
         if (res.ok) setSubmissions(await res.json());
     };
 
@@ -25,7 +26,7 @@ export default function SubmissionReviewPage() {
         if (!confirm(`คุณแน่ใจว่าต้องการ ${status === 'APPROVED' ? 'อนุมัติ' : 'ปฏิเสธ'} งานนี้?`)) return;
 
         setLoading(id);
-        const res = await fetch(`/api/submissions/${id}`, {
+        const res = await apiFetch(`/api/submissions/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status })

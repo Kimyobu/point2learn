@@ -27,6 +27,10 @@ export async function POST(req: NextRequest) {
         // Get device info from User-Agent
         const userAgent = req.headers.get('user-agent') || undefined
 
+        // Clear any existing session cookie before issuing new ones
+        const { destroySession } = await import('@/lib/auth')
+        await destroySession()
+
         // Create full session: access token (JWT 1h) + refresh token (DB, 90d)
         const { accessToken, refreshToken } = await createFullSession(
             user.id, user.role, user.username, userAgent

@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
 
@@ -22,12 +23,12 @@ export default function TaskManagerPage() {
     }, []);
 
     const fetchTasks = async () => {
-        const res = await fetch('/api/tasks');
+        const res = await apiFetch('/api/tasks');
         if (res.ok) setTasks(await res.json());
     };
 
     const fetchTaskTypes = async () => {
-        const res = await fetch('/api/task-types');
+        const res = await apiFetch('/api/task-types');
         if (res.ok) {
             const types = await res.json();
             setTaskTypes(types);
@@ -38,7 +39,7 @@ export default function TaskManagerPage() {
         e.preventDefault();
         setLoading(true);
 
-        const res = await fetch('/api/tasks', {
+        const res = await apiFetch('/api/tasks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
@@ -57,13 +58,13 @@ export default function TaskManagerPage() {
 
     const handleDelete = async (id: string) => {
         if (!confirm('ลบภารกิจนี้?')) return;
-        const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+        const res = await apiFetch(`/api/tasks/${id}`, { method: 'DELETE' });
         if (res.ok) fetchTasks();
     };
 
     const handleCreateType = async () => {
         if (!newTypeName.trim()) return;
-        const res = await fetch('/api/task-types', {
+        const res = await apiFetch('/api/task-types', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: newTypeName.trim(), resetMode: newTypeResetMode })
@@ -80,7 +81,7 @@ export default function TaskManagerPage() {
 
     const handleDeleteType = async (id: string, name: string) => {
         if (!confirm(`ลบประเภท "${name}"?`)) return;
-        const res = await fetch(`/api/task-types?id=${id}`, { method: 'DELETE' });
+        const res = await apiFetch(`/api/task-types?id=${id}`, { method: 'DELETE' });
         if (res.ok) fetchTaskTypes();
     };
 

@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -14,7 +15,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     useEffect(() => {
         async function checkAuth() {
             try {
-                const res = await fetch('/api/auth/me');
+                const res = await apiFetch('/api/auth/me');
                 if (!res.ok) throw new Error('Not auth');
                 const data = await res.json();
                 if (data.user.role !== 'ADMIN') {
@@ -35,7 +36,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         const refreshToken = await getToken();
         localStorage.removeItem('session_token');
         await clearToken();
-        await fetch('/api/auth/logout', {
+        await apiFetch('/api/auth/logout', {
             method: 'POST',
             body: JSON.stringify({ refreshToken })
         });

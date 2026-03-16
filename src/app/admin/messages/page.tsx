@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
 
@@ -14,7 +15,7 @@ export default function MessageManagerPage() {
     }, []);
 
     const fetchMessages = async () => {
-        const res = await fetch('/api/messages');
+        const res = await apiFetch('/api/messages');
         if (res.ok) setMessages(await res.json());
     };
 
@@ -22,7 +23,7 @@ export default function MessageManagerPage() {
         e.preventDefault();
         setLoading(true);
 
-        const res = await fetch('/api/messages', {
+        const res = await apiFetch('/api/messages', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ content })
@@ -40,7 +41,7 @@ export default function MessageManagerPage() {
 
     const handleDelete = async (id: string) => {
         if (!confirm('ลบข้อความนี้? (จะหายไปจากหน้าจอแฟน)')) return;
-        const res = await fetch(`/api/messages/${id}`, { method: 'DELETE' });
+        const res = await apiFetch(`/api/messages/${id}`, { method: 'DELETE' });
         if (res.ok) fetchMessages();
     };
 

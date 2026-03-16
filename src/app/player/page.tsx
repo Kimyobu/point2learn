@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -31,11 +32,11 @@ export default function PlayerDashboard() {
 
     const fetchData = async () => {
         const [tasksRes, subRes, msgRes, userRes, typesRes] = await Promise.all([
-            fetch('/api/tasks'),
-            fetch('/api/submissions'),
-            fetch('/api/messages'),
-            fetch('/api/auth/me'),
-            fetch('/api/task-types'),
+            apiFetch('/api/tasks'),
+            apiFetch('/api/submissions'),
+            apiFetch('/api/messages'),
+            apiFetch('/api/auth/me'),
+            apiFetch('/api/task-types'),
         ]);
         if (tasksRes.ok) setTasks(await tasksRes.json());
         if (subRes.ok) setSubmissions(await subRes.json());
@@ -53,7 +54,7 @@ export default function PlayerDashboard() {
         formData.append('taskId', taskId);
         formData.append('image', file);
 
-        const res = await fetch('/api/submissions', { method: 'POST', body: formData });
+        const res = await apiFetch('/api/submissions', { method: 'POST', body: formData });
         if (res.ok) {
             alert('ส่งผลงานเรียบร้อยแล้วค่ะ! รอที่รักตรวจน้า 💖');
             await fetchData();

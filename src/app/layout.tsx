@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Outfit, Mali } from 'next/font/google';
 import './globals.css';
 import PwaPrompt from '@/components/PwaPrompt';
-import AuthProvider from '@/components/AuthProvider';
+import SessionProvider from '@/components/AuthProvider';
 
 const outfit = Outfit({
   weight: ['300', '400', '500', '600', '700'],
@@ -37,10 +37,10 @@ export default function RootLayout({
   return (
     <html lang="th" className={`${outfit.variable} ${mali.variable}`}>
       <body>
-        <AuthProvider>
+        <SessionProvider>
           {children}
           <PwaPrompt />
-        </AuthProvider>
+        </SessionProvider>
       </body>
     </html>
   );

@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
 
@@ -19,7 +20,7 @@ export default function StoreManagerPage() {
     }, []);
 
     const fetchRewards = async () => {
-        const res = await fetch('/api/rewards');
+        const res = await apiFetch('/api/rewards');
         if (res.ok) setRewards(await res.json());
     };
 
@@ -31,7 +32,7 @@ export default function StoreManagerPage() {
         const uploadData = new FormData();
         uploadData.append('file', file);
 
-        const res = await fetch('/api/upload', { method: 'POST', body: uploadData });
+        const res = await apiFetch('/api/upload', { method: 'POST', body: uploadData });
         const data = await res.json();
 
         if (res.ok) {
@@ -46,7 +47,7 @@ export default function StoreManagerPage() {
         e.preventDefault();
         setLoading(true);
 
-        const res = await fetch('/api/rewards', {
+        const res = await apiFetch('/api/rewards', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, description, pointsCost, imageUrl })

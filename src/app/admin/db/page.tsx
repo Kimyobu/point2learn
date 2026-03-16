@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
 
@@ -19,7 +20,7 @@ export default function DbEditorPage() {
 
     const fetchData = async (m: ModelType) => {
         setLoading(true);
-        const res = await fetch(`/api/admin/db?model=${m}`);
+        const res = await apiFetch(`/api/admin/db?model=${m}`);
         if (res.ok) {
             const json = await res.json();
             setData(json.data);
@@ -29,7 +30,7 @@ export default function DbEditorPage() {
 
     const handleDelete = async (id: string) => {
         if (!confirm('ยืนยันการลบข้อมูลนี้ถาวร?')) return;
-        const res = await fetch('/api/admin/db', {
+        const res = await apiFetch('/api/admin/db', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ model, id })
@@ -60,7 +61,7 @@ export default function DbEditorPage() {
         if (payload.data.isAvailable !== undefined) payload.data.isAvailable = payload.data.isAvailable === 'true' || payload.data.isAvailable === true;
         if (payload.data.isGoogleForm !== undefined) payload.data.isGoogleForm = payload.data.isGoogleForm === 'true' || payload.data.isGoogleForm === true;
 
-        const res = await fetch('/api/admin/db', {
+        const res = await apiFetch('/api/admin/db', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -109,7 +110,7 @@ export default function DbEditorPage() {
                         formData.append('file', file);
 
                         try {
-                            const res = await fetch('/api/admin/db-upload', { method: 'POST', body: formData });
+                            const res = await apiFetch('/api/admin/db-upload', { method: 'POST', body: formData });
                             const data = await res.json();
                             if (res.ok) {
                                 alert(data.message || 'อัปโหลดเรียบร้อย โปรเจกต์อาจจะเริ่มการทำงานใหม่สักครู่');

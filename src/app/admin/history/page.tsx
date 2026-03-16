@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
 
@@ -30,8 +31,8 @@ export default function AdminHistoryPage() {
 
     useEffect(() => {
         Promise.all([
-            fetch('/api/submissions').then(r => r.json()),
-            fetch('/api/redeem-logs').then(r => r.json()),
+            apiFetch('/api/submissions').then(r => r.json()),
+            apiFetch('/api/redeem-logs').then(r => r.json()),
         ]).then(([subs, logs]) => {
             setSubmissions(subs);
             setRedeemLogs(logs);
