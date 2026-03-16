@@ -8,10 +8,13 @@ import AngPaoOverlay from '@/components/AngPaoOverlay';
 type Reward = { id: string; name: string; description: string; pointsCost: number; imageUrl: string | null };
 
 export default function StorePage() {
-    const { user } = usePlayerUser();
+    const { user, refreshUser } = usePlayerUser();
     const [rewards, setRewards] = useState<Reward[]>([]);
     const [redeeming, setRedeeming] = useState<string | null>(null);
     const [gachaAnimating, setGachaAnimating] = useState<string | null>(null);
+
+    // Cooldown state
+    const [cooldown, setCooldown] = useState(0);
 
     // Ang Pao state
     const [angPaoVisible, setAngPaoVisible] = useState(false);
@@ -22,12 +25,22 @@ export default function StorePage() {
         fetchRewards();
     }, []);
 
+    // Cooldown timer
+    useEffect(() => {
+        if (cooldown > 0) {
+            const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [cooldown]);
+
     const fetchRewards = async () => {
         const res = await apiFetch('/api/rewards');
         if (res.ok) setRewards(await res.json());
     };
 
     const handleRedeem = async (reward: Reward) => {
+        if (cooldown > 0) return;
+
         const isAngPao = reward.name.includes('อั่งเปา') || reward.name.includes('angpao') || reward.name.toLowerCase().includes('ang pao');
         const isGacha = !isAngPao && (reward.name.includes('สุ่ม') || reward.name.toLowerCase().includes('gacha') || reward.name.includes('กล่อง'));
 
@@ -53,19 +66,23 @@ export default function StorePage() {
 
         const data = await res.json();
         if (res.ok) {
+            // เริ่ม Cooldown หลังซื้อสำเร็จ
+            setCooldown(5);
+            refreshUser();
+
             if (isAngPao) {
                 // แสดง overlay อั่งเปา
-                setAngPaoPoints(data.pointsRemaining !== undefined ? undefined : undefined);
+                setAngPaoPoints(undefined);
                 setAngPaoMessage(data.message || `ได้รับ ${reward.name} แล้ว! ไปทวงกับที่รักเลย 💖`);
                 setAngPaoVisible(true);
             } else {
                 alert(isGacha
                     ? `🎉 ปิ๊งป๊องงงง! คุณเปิดได้รางวัล... ไปทวงกับที่รักเลย! \nพอยท์คงเหลือ: ${data.pointsRemaining} pt`
                     : `🎉 แลกรางวัลสำเร็จ! ${data.message} \nพอยท์คงเหลือ: ${data.pointsRemaining} pt`);
-                window.location.reload();
             }
         } else {
             alert(data.error || 'พอยท์ไม่พอ หรือเกิดข้อผิดพลาดค่ะ');
+            setCooldown(2); // ซื้อพลาดก็มีคูลดาวน์สั้นๆ
         }
         setRedeeming(null);
     };
@@ -104,6 +121,11 @@ export default function StorePage() {
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                 <h1 className="title" style={{ fontSize: '2.5rem' }}>🎁 ร้านค้าเปิดแล้ว! 🎁</h1>
                 <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>ใช้พอยท์ที่สะสมมา แลกของรางวัลสุดพิเศษจากที่รักได้เลย</p>
+                {cooldown > 0 && (
+                    <p style={{ color: 'var(--primary)', fontWeight: 600, marginTop: 8 }}>
+                        ⏳ กรุณารอสักครู่... ({cooldown}s)
+                    </p>
+                )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
@@ -112,6 +134,9 @@ export default function StorePage() {
                 ) : rewards.map(reward => {
                     const isAnimating = gachaAnimating === reward.id;
                     const isAngPao = reward.name.includes('อั่งเปา') || reward.name.includes('angpao') || reward.name.toLowerCase().includes('ang pao');
+                    const hasEnoughPoints = (user?.points ?? 0) >= reward.pointsCost;
+                    const isCooldown = cooldown > 0;
+
                     return (
                         <div
                             key={reward.id}
@@ -163,24 +188,25 @@ export default function StorePage() {
                             {reward.description && <p style={{ color: 'var(--text-muted)', flex: 1, marginBottom: '16px' }}>{reward.description}</p>}
 
                             <button
-                                className={(user?.points ?? 0) >= reward.pointsCost ? 'btn-primary' : 'btn-secondary'}
+                                className={hasEnoughPoints && !isCooldown ? 'btn-primary' : 'btn-secondary'}
                                 onClick={() => handleRedeem(reward)}
-                                disabled={redeeming === reward.id || isAnimating || (user?.points ?? 0) < reward.pointsCost}
+                                disabled={redeeming === reward.id || isAnimating || !hasEnoughPoints || isCooldown}
                                 style={{
                                     marginTop: 'auto',
-                                    opacity: (user?.points ?? 0) < reward.pointsCost ? 0.6 : 1,
-                                    cursor: (user?.points ?? 0) < reward.pointsCost ? 'not-allowed' : 'pointer',
-                                    ...(isAngPao && (user?.points ?? 0) >= reward.pointsCost ? {
+                                    opacity: (!hasEnoughPoints || isCooldown) ? 0.6 : 1,
+                                    cursor: (!hasEnoughPoints || isCooldown) ? 'not-allowed' : 'pointer',
+                                    ...(isAngPao && hasEnoughPoints && !isCooldown ? {
                                         background: 'linear-gradient(90deg, #c00000, #d4a000)',
                                         border: 'none',
                                     } : {}),
                                 }}
                             >
                                 {isAnimating ? 'กำลังสุ่ม...' :
-                                    redeeming === reward.id ? 'กำลังเปิดซอง...' :
-                                        (user?.points ?? 0) < reward.pointsCost ? `พอยท์ไม่พอ (-${reward.pointsCost} pt)` :
-                                            isAngPao ? `🧧 เปิดซองอั่งเปา! (-${reward.pointsCost} pt)` :
-                                                `แลกเลย! (-${reward.pointsCost} pt)`}
+                                    redeeming === reward.id ? 'กำลังทำรายการ...' :
+                                        isCooldown ? `รอสักครู่ (${cooldown}s)` :
+                                            !hasEnoughPoints ? `พอยท์ไม่พอ (-${reward.pointsCost} pt)` :
+                                                isAngPao ? <p>🧧 เปิดซองอั่งเปา!<br />(-{reward.pointsCost} pt)</p> :
+                                                    `แลกเลย! (-${reward.pointsCost} pt)`}
                             </button>
                         </div>
                     );

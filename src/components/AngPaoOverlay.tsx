@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface AngPaoOverlayProps {
     visible: boolean;
@@ -57,6 +58,11 @@ export default function AngPaoOverlay({ visible, pointsReceived, message, onClos
     const [phase, setPhase] = useState<'idle' | 'shake' | 'open' | 'coins' | 'done'>('idle');
     const [coins] = useState(() => makeCoins(28));
     const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     useEffect(() => {
         if (!visible) {
@@ -79,16 +85,20 @@ export default function AngPaoOverlay({ visible, pointsReceived, message, onClos
         return () => clearTimeout(timerRef.current);
     }, [visible]);
 
-    if (!visible) return null;
+    if (!visible || !mounted) return null;
 
-    return (
+    return createPortal(
         <div
             onClick={phase === 'done' ? onClose : undefined}
             style={{
-                position: 'fixed', inset: 0, zIndex: 9999,
-                background: 'rgba(0,0,0,0.75)',
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center',
+                position: 'fixed', 
+                inset: 0, 
+                zIndex: 999999, // เพิ่ม z-index ให้สูงขึ้นไปอีก
+                background: 'rgba(0,0,0,0.85)', // ปรับให้มืดขึ้นเล็กน้อย (0.75 -> 0.85)
+                display: 'flex', 
+                flexDirection: 'column',
+                alignItems: 'center', 
+                justifyContent: 'center',
                 cursor: phase === 'done' ? 'pointer' : 'default',
             }}
         >
@@ -103,6 +113,10 @@ export default function AngPaoOverlay({ visible, pointsReceived, message, onClos
                 @keyframes angpao-open-top {
                     from { transform: rotateX(0deg); opacity: 1; }
                     to   { transform: rotateX(-120deg) translateY(-20px); opacity: 0; }
+                }
+                @keyframes letter-slide-up {
+                    0%   { transform: translateY(0); opacity: 0; }
+                    100% { transform: translateY(-110px); opacity: 1; }
                 }
                 @keyframes coin-fly {
                     0%   { transform: translate(0,0) rotate(0deg) scale(0.5); opacity: 1; }
@@ -122,6 +136,31 @@ export default function AngPaoOverlay({ visible, pointsReceived, message, onClos
 
             {/* ── ซองอั่งเปา ── */}
             <div style={{ position: 'relative', width: 180, height: 240, marginBottom: 24 }}>
+                
+                {/* จดหมาย/จดหมายเล็กๆ ในซอง */}
+                {(phase === 'open' || phase === 'coins' || phase === 'done') && (
+                    <div style={{
+                        position: 'absolute', top: 20, left: 10, right: 10, height: 180,
+                        background: '#fff',
+                        borderRadius: 8,
+                        boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                        padding: '16px 12px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        textAlign: 'center',
+                        zIndex: 1,
+                        animation: 'letter-slide-up 0.8s cubic-bezier(0.17, 0.67, 0.83, 0.67) forwards',
+                    }}>
+                        <p style={{ 
+                            color: '#d00000', 
+                            fontSize: '0.95rem', 
+                            fontWeight: 800, 
+                            lineHeight: 1.4,
+                            margin: 0
+                        }}>
+                            อั่งเปานี้พี่ให้หนู 100 บาทนะคะ 💖
+                        </p>
+                    </div>
+                )}
 
                 {/* ตัวซอง (ส่วนล่าง) */}
                 <div style={{
@@ -131,6 +170,7 @@ export default function AngPaoOverlay({ visible, pointsReceived, message, onClos
                     boxShadow: '0 8px 40px rgba(200,0,0,0.5)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     flexDirection: 'column', gap: 8,
+                    zIndex: 2,
                     animation: phase === 'shake' ? 'angpao-shake 0.35s ease-in-out infinite' :
                         (phase === 'open' || phase === 'coins') ? 'angpao-pulse 0.8s ease infinite' : 'none',
                 }}>
@@ -151,7 +191,7 @@ export default function AngPaoOverlay({ visible, pointsReceived, message, onClos
                         transformOrigin: 'top center',
                         perspective: 400,
                         animation: 'angpao-open-top 0.5s ease-out forwards',
-                        zIndex: 2,
+                        zIndex: 3,
                     }} />
                 )}
 
@@ -170,7 +210,7 @@ export default function AngPaoOverlay({ visible, pointsReceived, message, onClos
                             background: `radial-gradient(circle at 35% 35%, #ffe566, #d4a000)`,
                             border: '2px solid #f0c000',
                             boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-                            zIndex: 3,
+                            zIndex: 4,
                             // @ts-ignore
                             '--cx': `${cx}px`,
                             '--cy': `${cy}px`,
@@ -191,6 +231,7 @@ export default function AngPaoOverlay({ visible, pointsReceived, message, onClos
                     textAlign: 'center',
                     animation: 'result-pop 0.5s ease-out forwards',
                     boxShadow: '0 8px 40px rgba(200,150,0,0.4)',
+                    zIndex: 5,
                 }}>
                     <div style={{ fontSize: '3rem', marginBottom: 8 }}>🎊</div>
                     <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#8b0000', margin: '0 0 8px' }}>
@@ -210,11 +251,12 @@ export default function AngPaoOverlay({ visible, pointsReceived, message, onClos
 
             {/* status text */}
             {phase !== 'done' && (
-                <p style={{ color: 'rgba(255,220,0,0.85)', fontWeight: 700, fontSize: '1.1rem', marginTop: 8, letterSpacing: 1 }}>
+                <p style={{ color: 'rgba(255,220,0,0.85)', fontWeight: 700, fontSize: '1.1rem', marginTop: 8, letterSpacing: 1, zIndex: 5 }}>
                     {phase === 'shake' ? '🧧 กำลังเปิดซอง...' :
                         phase === 'open' ? '✨ เปิดออกแล้ว!' : '🪙 เหรียญทองกระจาย!'}
                 </p>
             )}
-        </div>
+        </div>,
+        document.body
     );
 }
