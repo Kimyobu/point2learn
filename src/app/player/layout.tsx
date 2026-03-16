@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { getToken, clearToken } from '@/lib/sessionDB';
 
 export default function PlayerLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
@@ -31,8 +32,13 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
     }, [pathname, router]);
 
     const handleLogout = async () => {
+        const refreshToken = await getToken();
         localStorage.removeItem('session_token');
-        await fetch('/api/auth/logout', { method: 'POST' });
+        await clearToken();
+        await fetch('/api/auth/logout', {
+            method: 'POST',
+            body: JSON.stringify({ refreshToken })
+        });
         router.push('/login');
     };
 

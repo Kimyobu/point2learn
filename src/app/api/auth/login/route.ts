@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { comparePassword, setSession } from '@/lib/auth'
+import { comparePassword, createFullSession } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
     try {
@@ -24,21 +24,22 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
         }
 
-        await setSession(user.id, user.role, user.username)
+        // Get device info from User-Agent
+        const userAgent = req.headers.get('user-agent') || undefined
 
-        // Also return token for localStorage persistence (iOS PWA)
-        const { encrypt } = await import('@/lib/auth')
-        const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        const token = await encrypt({ userId: user.id, role: user.role, username: user.username, expires })
+        // Create full session: access token (JWT 1h) + refresh token (DB, 90d)
+        const { accessToken, refreshToken } = await createFullSession(
+            user.id, user.role, user.username, userAgent
+        )
 
         return NextResponse.json({
             success: true,
-            token,
+            accessToken,
+            refreshToken,
             user: { id: user.id, username: user.username, role: user.role, points: user.points }
         })
     } catch (error) {
-        console.error('[API Error]', error);
-        console.error('Login error:', error)
+        console.error('[API Error] login:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 }

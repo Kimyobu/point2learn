@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { saveToken } from '@/lib/sessionDB';
 
 export default function LoginPage() {
     const [username, setUsername] = useState('');
@@ -25,10 +26,14 @@ export default function LoginPage() {
             const data = await res.json();
 
             if (res.ok) {
-                // Save token for iOS PWA persistence (cookies lost on force close)
-                if (data.token) {
-                    localStorage.setItem('session_token', data.token);
+                // Save tokens for iOS PWA persistence
+                if (data.refreshToken) {
+                    await saveToken(data.refreshToken);
                 }
+                if (data.accessToken) {
+                    localStorage.setItem('session_token', data.accessToken);
+                }
+
                 if (data.user.role === 'ADMIN') {
                     router.push('/admin');
                 } else {
