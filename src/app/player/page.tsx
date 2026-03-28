@@ -3,7 +3,20 @@ import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { motion } from 'framer-motion';
 import { usePlayerUser } from '@/context/PlayerUser';
+import { siteConfig } from '@/config/site';
+
+const containerVariants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { ease: [0.25, 1, 0.5, 1] as const, duration: 0.4 } }
+};
 
 type Task = { id: string; title: string; description: string; points: number; type: string };
 type Submission = { id: string; taskId: string; status: string; imageUrl: string | null; createdAt: string };
@@ -55,10 +68,10 @@ export default function PlayerDashboard() {
 
         const res = await apiFetch('/api/submissions', { method: 'POST', body: formData });
         if (res.ok) {
-            alert('ส่งผลงานเรียบร้อยแล้วค่ะ! รอที่รักตรวจน้า 💖');
+            alert(siteConfig.playerDashboard.alertSubmitSuccess);
             await fetchData();
         } else {
-            alert('เกิดข้อผิดพลาดในการส่งผลงาน');
+            alert(siteConfig.playerDashboard.alertSubmitFailed);
         }
         setUploading(null);
     };
@@ -169,116 +182,158 @@ export default function PlayerDashboard() {
     }, {} as Record<string, Task[]>);
 
     return (
-        <div className="animate-fade-in">
-            {messages.length > 0 && messages.map(msg => (
-                <div key={msg.id} className="card" style={{ marginBottom: '24px', background: 'var(--primary-dark)', color: 'white', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '1.5rem' }}>💌</span>
-                    <p style={{ margin: 0, fontWeight: 500, lineHeight: 1.4 }}>{msg.content}</p>
-                </div>
-            ))}
+        <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }}>
+            
+            {/* Header Section without Card Container */}
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }} style={{ textAlign: 'left', marginTop: 'var(--space-4)' }}>
+                <h1 className="title" style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', marginBottom: '8px', lineHeight: 1.1 }}>
+                    {siteConfig.playerDashboard.welcomePrefix} ✨
+                </h1>
+                <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>
+                    {siteConfig.playerDashboard.welcomeSuffix}
+                </p>
+            </motion.div>
 
-            {user && (
-                <div className="card" style={{ marginBottom: '32px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-                        {user.avatarUrl ? (
-                            <img src={user.avatarUrl} alt="Avatar" style={{ width: 48, height: 48, borderRadius: '50%', background: user.avatarBg || 'transparent', objectFit: 'cover' }} loading="lazy" />
-                        ) : (
-                            <div style={{ width: 48, height: 48, borderRadius: '50%', background: user.avatarBg || 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>👤</div>
-                        )}
-                        <div style={{ flex: 1 }}>
-                            <h2 style={{ fontSize: '1.2rem', color: 'var(--text-main)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span>📝 ฉายา: <b style={{ color: 'var(--primary-dark)' }}>{user.title || getLevelInfo(user.totalPointsEarned).title}</b></span>
-                                <span style={{ fontSize: '0.9rem', background: 'var(--primary-light)', color: 'var(--primary-dark)', padding: '4px 12px', borderRadius: '20px', fontWeight: 'bold' }}>
-                                    Lv. {getLevelInfo(user.totalPointsEarned).level}
-                                </span>
-                            </h2>
-                        </div>
-                    </div>
-                    <div style={{ width: '100%', background: '#eee', borderRadius: '10px', height: '12px', overflow: 'hidden', marginTop: '12px' }}>
-                        <div style={{
-                            width: `${Math.min(100, (user.totalPointsEarned - getLevelInfo(user.totalPointsEarned).min) / (getLevelInfo(user.totalPointsEarned).max - getLevelInfo(user.totalPointsEarned).min) * 100)}%`,
-                            height: '100%',
-                            background: 'linear-gradient(90deg, var(--primary), var(--primary-dark))',
-                            transition: 'width 0.5s ease-in-out'
-                        }} />
-                    </div>
-                    <p style={{ textAlign: 'right', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                        พอยท์สะสมรวม: {user.totalPointsEarned} / {getLevelInfo(user.totalPointsEarned).max} pt
-                    </p>
-                </div>
+            {messages.length > 0 && (
+                <motion.div variants={containerVariants} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {messages.map(msg => (
+                        <motion.div variants={itemVariants} key={msg.id} style={{ 
+                            background: 'var(--surface)', 
+                            borderLeft: '4px solid var(--primary-dark)',
+                            color: 'var(--text-main)', 
+                            padding: '16px 20px', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '16px',
+                            boxShadow: 'var(--shadow-sm)',
+                            borderRadius: '0 var(--radius-md) var(--radius-md) 0'
+                        }}>
+                            <span style={{ fontSize: '1.5rem', opacity: 0.8 }}>💌</span>
+                            <p style={{ margin: 0, fontWeight: 500, lineHeight: 1.5, fontSize: '1.05rem' }}>{msg.content}</p>
+                        </motion.div>
+                    ))}
+                </motion.div>
             )}
 
-            <div className="card" style={{ marginBottom: '32px', textAlign: 'center', background: 'linear-gradient(to right, var(--primary-light), var(--surface))' }}>
-                <h1 className="title" style={{ fontSize: '2rem', marginBottom: '8px' }}>สวัสดีคนเก่ง วันนี้ทำได้ดีมากครับ! 💖</h1>
-                <p style={{ fontSize: '1.1rem', color: 'var(--text-main)' }}>สู้ๆ กับภารกิจวันนี้ เก็บพอยท์ไปแลกของรางวัลกันน้า 🎁</p>
-            </div>
+            {/* Profile Section without heavy card wrapping */}
+            {user && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.5 }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        {user.avatarUrl ? (
+                            <Image src={user.avatarUrl} alt="Avatar" width={64} height={64} style={{ borderRadius: '50%', background: user.avatarBg || 'transparent', objectFit: 'cover', boxShadow: 'var(--shadow-sm)' }} priority />
+                        ) : (
+                            <div style={{ width: 64, height: 64, borderRadius: '50%', background: user.avatarBg || 'var(--primary-light)', color: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', boxShadow: 'var(--shadow-sm)' }}>👤</div>
+                        )}
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '1.1rem', color: 'var(--text-muted)' }}>{siteConfig.playerDashboard.titlePrefix}</span>
+                                <h2 style={{ fontSize: '1.6rem', color: 'var(--text-main)', margin: 0, fontWeight: 800 }}>
+                                    {user.title || getLevelInfo(user.totalPointsEarned).title}
+                                </h2>
+                                <span style={{ fontSize: '0.85rem', background: 'var(--surface)', border: '1px solid var(--primary-light)', color: 'var(--primary-dark)', padding: '4px 12px', borderRadius: 'var(--radius-full)', fontWeight: 700, marginLeft: 'auto' }}>
+                                    {siteConfig.playerDashboard.levelPrefix} {getLevelInfo(user.totalPointsEarned).level}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                            <span>{siteConfig.playerDashboard.accumulatedPoints}</span>
+                            <span>{user.totalPointsEarned} / {getLevelInfo(user.totalPointsEarned).max} {siteConfig.global.pointsSuffix}</span>
+                        </div>
+                        <div style={{ width: '100%', background: 'rgba(58, 16, 30, 0.05)', borderRadius: 'var(--radius-full)', height: '14px', overflow: 'hidden' }}>
+                            <div style={{
+                                width: `${Math.min(100, (user.totalPointsEarned - getLevelInfo(user.totalPointsEarned).min) / (getLevelInfo(user.totalPointsEarned).max - getLevelInfo(user.totalPointsEarned).min) * 100)}%`,
+                                height: '100%',
+                                background: 'var(--text-main)',
+                                transition: 'width 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+                                borderRadius: 'var(--radius-full)'
+                            }} />
+                        </div>
+                    </div>
+                </motion.div>
+            )}
 
             {/* Banner for hidden approved quests */}
             {seenApproved && approvedCount > 0 && (
-                <div className="card" style={{ marginBottom: '24px', background: 'var(--success)', color: 'white', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                    <span style={{ fontWeight: 600 }}>✅ มี {approvedCount} ภารกิจที่สำเร็จแล้ว</span>
-                    <Link href="/player/history" style={{ color: 'white', fontWeight: 700, textDecoration: 'underline' }}>ดูได้ที่ประวัติ 📖</Link>
-                </div>
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 20 }} style={{ 
+                    background: 'var(--success)', 
+                    color: '#ffffff', 
+                    padding: '16px 24px', 
+                    borderRadius: 'var(--radius-md)',
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    flexWrap: 'wrap', 
+                    gap: '12px',
+                    boxShadow: '0 4px 12px rgba(112, 169, 143, 0.3)'
+                }}>
+                    <span style={{ fontWeight: 600, fontSize: '1.05rem' }}>✨ {siteConfig.playerDashboard.approvedCountPrefix} {approvedCount} {siteConfig.playerDashboard.approvedCountSuffix}</span>
+                    <Link href="/player/history" style={{ color: '#ffffff', fontWeight: 700, textDecoration: 'underline', opacity: 0.9 }}>{siteConfig.playerDashboard.historyLink}</Link>
+                </motion.div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                 <select
                     className="input-field"
-                    style={{ width: 'auto', padding: '8px 12px', minWidth: '150px' }}
+                    style={{ width: 'auto', padding: '10px 16px', minWidth: '180px', fontWeight: 500, borderRadius: 'var(--radius-full)' }}
                     value={sortOption}
                     onChange={(e) => setSortOption(e.target.value)}
                 >
-                    <option value="NEWEST">ใหม่ล่าสุด</option>
-                    <option value="OLDEST">เก่าสุด</option>
-                    <option value="POINTS_DESC">พอยท์ (มากไปน้อย)</option>
-                    <option value="POINTS_ASC">พอยท์ (น้อยไปมาก)</option>
+                    <option value="NEWEST">{siteConfig.playerDashboard.sortNewest}</option>
+                    <option value="OLDEST">{siteConfig.playerDashboard.sortOldest}</option>
+                    <option value="POINTS_DESC">{siteConfig.playerDashboard.sortPointsDesc}</option>
+                    <option value="POINTS_ASC">{siteConfig.playerDashboard.sortPointsAsc}</option>
                 </select>
             </div>
 
             {Object.entries(tasksByType).map(([type, list]) => (
-                <div key={type} style={{ marginBottom: '32px' }}>
-                    <h2 className="title" style={{ fontSize: '1.5rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary-dark)' }}>
-                        ✨ หมวดหมู่: {type}
+                <div key={type} style={{ marginTop: '16px' }}>
+                    <h2 className="title" style={{ fontSize: '1.4rem', marginBottom: '20px', color: 'var(--text-main)', opacity: 0.9 }}>
+                        {siteConfig.playerDashboard.tasksCategoryPrefix} {type}
                     </h2>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <motion.div variants={containerVariants} initial="hidden" animate="show" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
                         {list.map(task => {
                             const taskInfo = canSubmitTask(task);
                             const sub = getTaskSubmission(task.id);
                             return (
-                                <div key={task.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                        <div>
-                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-main)' }}>{task.title}</h3>
-                                            {task.description && <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginTop: '4px' }}>{task.description}</p>}
+                                <motion.div variants={itemVariants} whileHover={{ y: -2 }} key={task.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.3, marginBottom: '6px' }}>{task.title}</h3>
+                                            {task.description && <p style={{ color: 'var(--text-muted)', fontSize: '1rem', lineHeight: 1.5 }}>{task.description}</p>}
                                             {taskInfo.count > 0 && (
-                                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>ส่งแล้ว {taskInfo.count} ครั้ง</p>
+                                                <div style={{ display: 'inline-block', fontSize: '0.85rem', color: 'var(--primary-dark)', backgroundColor: 'var(--primary-light)', padding: '4px 10px', borderRadius: '4px', marginTop: '12px', fontWeight: 600 }}>
+                                                    {siteConfig.playerDashboard.submittedPrefix} {taskInfo.count} {siteConfig.playerDashboard.timesSuffix}
+                                                </div>
                                             )}
                                         </div>
-                                        <div className="badge badge-points">+{task.points} pt</div>
+                                        <div className="badge badge-points" style={{ fontSize: '1rem', padding: '6px 16px' }}>+{task.points} {siteConfig.global.pointsSuffix}</div>
                                     </div>
 
                                     {/* Image/PDF preview for submitted tasks */}
                                     {sub?.imageUrl && (
-                                        <a href={sub.imageUrl} target="_blank" rel="noopener noreferrer">
+                                        <motion.a whileHover={{ scale: 1.02 }} href={sub.imageUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: '8px' }}>
                                             {sub.imageUrl.toLowerCase().endsWith('.pdf') ? (
-                                                <iframe src={sub.imageUrl} style={{ width: '100%', height: '180px', border: '1px solid #eee', borderRadius: 'var(--radius-sm)', pointerEvents: 'none' }} title="PDF Preview" />
+                                                <iframe src={sub.imageUrl} style={{ width: '100%', height: '180px', border: '1px solid rgba(58, 16, 30, 0.1)', borderRadius: 'var(--radius-sm)', pointerEvents: 'none' }} title="PDF Preview" />
                                             ) : (
-                                                <img src={sub.imageUrl} alt="หลักฐาน" loading="lazy"
-                                                    style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: 'var(--radius-md)', background: 'var(--background)' }} />
+                                                <div style={{ position: 'relative', width: '100%', height: '240px' }}>
+                                                    <Image src={sub.imageUrl} alt="หลักฐาน" fill style={{ objectFit: 'cover', borderRadius: 'var(--radius-md)', background: 'var(--background)' }} sizes="(max-width: 768px) 100vw, 800px" />
+                                                </div>
                                             )}
-                                        </a>
+                                        </motion.a>
                                     )}
 
-                                    <div style={{ marginTop: '8px' }}>
-                                        {taskInfo.status === 'APPROVED' && !taskInfo.canSubmit && <span style={{ color: 'var(--success)', fontWeight: 600 }}>✅ สำเร็จแล้วได้รับพอยท์แล้ว!</span>}
-                                        {taskInfo.status === 'APPROVED' && taskInfo.canSubmit && <span style={{ color: 'var(--success)', fontWeight: 600 }}>✅ ส่งได้อีก!</span>}
-                                        {taskInfo.status === 'PENDING' && <span style={{ color: '#ffb703', fontWeight: 600 }}>⏳ รอที่รักชื่นชมผลงานอยู่...</span>}
-                                        {taskInfo.status === 'REJECTED' && <span style={{ color: 'var(--danger)', fontWeight: 600 }}>❌ ต้องแก้นิดหน่อย ลองส่งใหม่น้า</span>}
-                                        {taskInfo.status === 'COOLDOWN' && <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>🕐 ส่งครบโควต้าแล้ว รอรอบถัดไปน้า</span>}
+                                    <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid rgba(58, 16, 30, 0.06)' }}>
+                                        {taskInfo.status === 'APPROVED' && !taskInfo.canSubmit && <span style={{ color: 'var(--success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>✨ {siteConfig.playerDashboard.statusApprovedPaid}</span>}
+                                        {taskInfo.status === 'APPROVED' && taskInfo.canSubmit && <span style={{ color: 'var(--success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>✨ {siteConfig.playerDashboard.statusApprovedRepeat}</span>}
+                                        {taskInfo.status === 'PENDING' && <span style={{ color: '#d97706', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>⏳ {siteConfig.playerDashboard.statusPending}</span>}
+                                        {taskInfo.status === 'REJECTED' && <span style={{ color: 'var(--danger)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>⚠️ {siteConfig.playerDashboard.statusRejected}</span>}
+                                        {taskInfo.status === 'COOLDOWN' && <span style={{ color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>🕒 {siteConfig.playerDashboard.statusCooldown}</span>}
 
                                         {taskInfo.canSubmit && (
-                                            <label className="btn-primary" style={{ display: 'inline-flex', padding: '10px 20px', fontSize: '0.95rem', width: 'auto', marginTop: '4px', cursor: 'pointer' }}>
-                                                {uploading === task.id ? 'กำลังส่ง...' : '📸 ส่งรูป/PDF ผลงานเลย!'}
+                                            <label className="btn-primary" style={{ display: 'inline-flex', marginTop: '16px', cursor: 'pointer' }}>
+                                                {uploading === task.id ? siteConfig.playerDashboard.btnSubmitting : siteConfig.playerDashboard.btnSubmitFiles}
                                                 <input
                                                     type="file"
                                                     accept="image/*,application/pdf"
@@ -289,10 +344,10 @@ export default function PlayerDashboard() {
                                             </label>
                                         )}
                                     </div>
-                                </div>
+                                </motion.div>
                             );
                         })}
-                    </div>
+                    </motion.div>
                 </div>
             ))}
         </div>

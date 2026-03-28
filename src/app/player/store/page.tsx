@@ -2,8 +2,21 @@
 import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { motion } from 'framer-motion';
 import { usePlayerUser } from '@/context/PlayerUser';
 import AngPaoOverlay from '@/components/AngPaoOverlay';
+import { siteConfig } from '@/config/site';
+
+const containerVariants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { ease: [0.25, 1, 0.5, 1] as const, duration: 0.4 } }
+};
 
 type Reward = { id: string; name: string; description: string; pointsCost: number; imageUrl: string | null };
 
@@ -45,10 +58,10 @@ export default function StorePage() {
         const isGacha = !isAngPao && (reward.name.includes('สุ่ม') || reward.name.toLowerCase().includes('gacha') || reward.name.includes('กล่อง'));
 
         if (!confirm(isAngPao
-            ? `ใช้ ${reward.pointsCost} pt เพื่อเปิดซองอั่งเปา 🧧 ใช่ไหมคะ?`
+            ? `${siteConfig.playerStore.confirmAngPaoPrefix} ${reward.pointsCost} ${siteConfig.playerStore.confirmAngPaoSuffix}`
             : isGacha
-                ? `ใช้ ${reward.pointsCost} pt เพื่อเปิด ${reward.name} ลุ้นของรางวัลใช่ไหมคะ? 🎲`
-                : `ต้องการแลก ${reward.name} ด้วย ${reward.pointsCost} pt ใช่ไหมคะ?`)
+                ? `${siteConfig.playerStore.confirmGachaPrefix} ${reward.pointsCost} ${siteConfig.playerStore.confirmGachaSuffix}`
+                : `ต้องการแลก ${reward.name} ด้วย ${reward.pointsCost} ${siteConfig.playerStore.confirmNormalSuffix}`)
         ) return;
 
         if (isGacha) {
@@ -77,11 +90,11 @@ export default function StorePage() {
                 setAngPaoVisible(true);
             } else {
                 alert(isGacha
-                    ? `🎉 ปิ๊งป๊องงงง! คุณเปิดได้รางวัล... ไปทวงกับที่รักเลย! \nพอยท์คงเหลือ: ${data.pointsRemaining} pt`
-                    : `🎉 แลกรางวัลสำเร็จ! ${data.message} \nพอยท์คงเหลือ: ${data.pointsRemaining} pt`);
+                    ? `${siteConfig.playerStore.alertGachaSuccess} \nพอยท์คงเหลือ: ${data.pointsRemaining} ${siteConfig.global.pointsSuffix}`
+                    : `${siteConfig.playerStore.alertRedeemSuccess} ${data.message} \nพอยท์คงเหลือ: ${data.pointsRemaining} ${siteConfig.global.pointsSuffix}`);
             }
         } else {
-            alert(data.error || 'พอยท์ไม่พอ หรือเกิดข้อผิดพลาดค่ะ');
+            alert(data.error || siteConfig.playerStore.alertError);
             setCooldown(2); // ซื้อพลาดก็มีคูลดาวน์สั้นๆ
         }
         setRedeeming(null);
@@ -118,19 +131,36 @@ export default function StorePage() {
                 }
             `}} />
 
-            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                <h1 className="title" style={{ fontSize: '2.5rem' }}>🎁 ร้านค้าเปิดแล้ว! 🎁</h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>ใช้พอยท์ที่สะสมมา แลกของรางวัลสุดพิเศษจากที่รักได้เลย</p>
+            <div style={{ textAlign: 'left', marginTop: 'var(--space-4)', marginBottom: 'var(--space-8)' }}>
+                <h1 className="title" style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', marginBottom: '8px', lineHeight: 1.1 }}>
+                    {siteConfig.playerStore.headline} ✨
+                </h1>
+                <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem' }}>
+                    {siteConfig.playerStore.subheadline}
+                </p>
                 {cooldown > 0 && (
-                    <p style={{ color: 'var(--primary)', fontWeight: 600, marginTop: 8 }}>
-                        ⏳ กรุณารอสักครู่... ({cooldown}s)
-                    </p>
+                    <div style={{ 
+                        marginTop: '16px', 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: '8px',
+                        background: 'rgba(238, 114, 20, 0.1)',
+                        padding: '8px 16px',
+                        borderRadius: 'var(--radius-full)',
+                        color: '#d97706',
+                        fontWeight: 600
+                    }}>
+                        ⏳ {siteConfig.playerStore.btnCooldownWait}... ({cooldown}s)
+                    </div>
                 )}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+            <motion.div variants={containerVariants} initial="hidden" animate="show" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
                 {rewards.length === 0 ? (
-                    <p style={{ textAlign: 'center', width: '100%', color: 'var(--text-muted)' }}>ตอนนี้ยังไม่มีของรางวัลน้า รอสิ้นเดือนนะคะ 💕</p>
+                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '64px 0', color: 'var(--text-muted)' }}>
+                        <span style={{ fontSize: '2rem', display: 'block', marginBottom: '8px', opacity: 0.5 }}>🍃</span>
+                        {siteConfig.playerStore.emptyStore}
+                    </div>
                 ) : rewards.map(reward => {
                     const isAnimating = gachaAnimating === reward.id;
                     const isAngPao = reward.name.includes('อั่งเปา') || reward.name.includes('angpao') || reward.name.toLowerCase().includes('ang pao');
@@ -138,14 +168,19 @@ export default function StorePage() {
                     const isCooldown = cooldown > 0;
 
                     return (
-                        <div
+                        <motion.div
                             key={reward.id}
+                            variants={itemVariants}
+                            whileHover={{ y: -4, scale: 1.02 }}
+                            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                             className={`card ${isAnimating ? 'gacha-shake' : ''} ${isAngPao ? 'angpao-card' : ''}`}
                             style={{ display: 'flex', flexDirection: 'column', height: '100%', border: isAnimating ? '3px solid var(--primary)' : undefined }}
                         >
                             {/* รูป / placeholder */}
                             {reward.imageUrl ? (
-                                <img src={reward.imageUrl} alt={reward.name} style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: 'var(--radius-md) var(--radius-md) 0 0', marginBottom: '16px' }} loading="lazy" />
+                                <div style={{ position: 'relative', width: '100%', height: '150px', marginBottom: '16px' }}>
+                                    <Image src={reward.imageUrl} alt={reward.name} fill sizes="(max-width: 768px) 100vw, 300px" style={{ objectFit: 'cover', borderRadius: 'var(--radius-md) var(--radius-md) 0 0' }} />
+                                </div>
                             ) : (
                                 <div style={{
                                     width: '100%', height: '150px',
@@ -173,19 +208,20 @@ export default function StorePage() {
                             {/* badge พิเศษ */}
                             {isAngPao && (
                                 <div style={{
-                                    background: 'linear-gradient(90deg, #d00000, #d4a000)',
-                                    color: 'white', fontSize: '0.75rem', fontWeight: 800,
-                                    padding: '3px 10px', borderRadius: 20, alignSelf: 'flex-start',
-                                    marginBottom: 6, letterSpacing: 1,
+                                    background: 'var(--text-main)',
+                                    color: '#ffffff', fontSize: '0.75rem', fontWeight: 700,
+                                    padding: '4px 12px', borderRadius: 'var(--radius-full)', alignSelf: 'flex-start',
+                                    marginBottom: '12px', letterSpacing: '0.05em',
+                                    textTransform: 'uppercase'
                                 }}>
-                                    ✨ ไอเทมพิเศษ
+                                    ✨ {siteConfig.playerStore.itemSpecialBadge}
                                 </div>
                             )}
 
-                            <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: isAngPao ? '#8b0000' : 'var(--primary-dark)', marginBottom: '4px' }}>
+                            <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '8px', lineHeight: 1.2 }}>
                                 {reward.name}
                             </h3>
-                            {reward.description && <p style={{ color: 'var(--text-muted)', flex: 1, marginBottom: '16px' }}>{reward.description}</p>}
+                            {reward.description && <p style={{ color: 'var(--text-muted)', flex: 1, marginBottom: '24px', fontSize: '1rem', lineHeight: 1.5 }}>{reward.description}</p>}
 
                             <button
                                 className={hasEnoughPoints && !isCooldown ? 'btn-primary' : 'btn-secondary'}
@@ -195,23 +231,27 @@ export default function StorePage() {
                                     marginTop: 'auto',
                                     opacity: (!hasEnoughPoints || isCooldown) ? 0.6 : 1,
                                     cursor: (!hasEnoughPoints || isCooldown) ? 'not-allowed' : 'pointer',
+                                    justifyContent: 'center',
+                                    padding: '16px',
+                                    border: 'none',
                                     ...(isAngPao && hasEnoughPoints && !isCooldown ? {
-                                        background: 'linear-gradient(90deg, #c00000, #d4a000)',
-                                        border: 'none',
+                                        background: 'linear-gradient(135deg, #c00000 0%, #a00000 100%)',
+                                        color: 'white',
+                                        boxShadow: '0 8px 16px rgba(192, 0, 0, 0.25)',
                                     } : {}),
                                 }}
                             >
-                                {isAnimating ? 'กำลังสุ่ม...' :
-                                    redeeming === reward.id ? 'กำลังทำรายการ...' :
-                                        isCooldown ? `รอสักครู่ (${cooldown}s)` :
-                                            !hasEnoughPoints ? `พอยท์ไม่พอ (-${reward.pointsCost} pt)` :
-                                                isAngPao ? <p>🧧 เปิดซองอั่งเปา!<br />(-{reward.pointsCost} pt)</p> :
-                                                    `แลกเลย! (-${reward.pointsCost} pt)`}
+                                {isAnimating ? siteConfig.playerStore.btnGachaAnimating :
+                                    redeeming === reward.id ? siteConfig.playerStore.btnRedeeming :
+                                        isCooldown ? `${siteConfig.playerStore.btnCooldownWait} (${cooldown}s)` :
+                                            !hasEnoughPoints ? `${siteConfig.playerStore.btnInsufficientPoints} (-${reward.pointsCost} ${siteConfig.global.pointsSuffix})` :
+                                                isAngPao ? <span>🧧 {siteConfig.playerStore.btnRedeemAngPao} (-{reward.pointsCost} {siteConfig.global.pointsSuffix})</span> :
+                                                    <span>{siteConfig.playerStore.btnRedeemNormal} (-{reward.pointsCost} {siteConfig.global.pointsSuffix})</span>}
                             </button>
-                        </div>
+                        </motion.div>
                     );
                 })}
-            </div>
+            </motion.div>
 
             {/* Ang Pao overlay */}
             <AngPaoOverlay

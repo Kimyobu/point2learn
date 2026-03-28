@@ -20,6 +20,14 @@
   --shadow-sm: 0 2px 8px rgba(255, 139, 167, 0.1);
   --shadow-md: 0 8px 16px rgba(255, 139, 167, 0.15);
   --shadow-lg: 0 12px 24px rgba(255, 139, 167, 0.2);
+
+  /* Spacing Scale (Kept for compatibility with new pages) */
+  --space-2: 8px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
 }
 
 * {
@@ -165,17 +173,9 @@ button {
 
 /* Animations */
 @keyframes float {
-  0% {
-    transform: translateY(0px);
-  }
-
-  50% {
-    transform: translateY(-10px);
-  }
-
-  100% {
-    transform: translateY(0px);
-  }
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
 }
 
 .animate-float {
@@ -183,15 +183,8 @@ button {
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-in {

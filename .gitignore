@@ -54,3 +54,5 @@ next-env.d.ts
 # test files
 test-prisma.js
 add-logs.js
+
+.agent

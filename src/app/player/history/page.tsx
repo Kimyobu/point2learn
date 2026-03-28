@@ -2,6 +2,18 @@
 import { apiFetch } from '@/lib/apiClient';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { motion } from 'framer-motion';
+
+const containerVariants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { ease: [0.25, 1, 0.5, 1] as const, duration: 0.4 } }
+};
 
 type Submission = {
     id: string;
@@ -52,8 +64,8 @@ export default function PlayerHistoryPage() {
     });
 
     return (
-        <div className="animate-fade-in">
-            <h1 className="title" style={{ fontSize: '2rem', marginBottom: '24px' }}>📖 ประวัติ</h1>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="animate-fade-in">
+            <motion.h1 initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as const }} className="title" style={{ fontSize: '2rem', marginBottom: '24px' }}>📖 ประวัติ</motion.h1>
 
             <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
                 <button style={tabStyle(tab === 'submissions')} onClick={() => setTab('submissions')}>📝 การส่งงาน</button>
@@ -67,11 +79,11 @@ export default function PlayerHistoryPage() {
                             { label: 'รอตรวจ', value: submissions.filter(s => s.status === 'PENDING').length, color: '#ffb703' },
                             { label: 'อนุมัติแล้ว', value: submissions.filter(s => s.status === 'APPROVED').length, color: 'var(--success)' },
                             { label: 'ปฏิเสธ', value: submissions.filter(s => s.status === 'REJECTED').length, color: 'var(--danger)' },
-                        ].map(stat => (
-                            <div key={stat.label} className="card" style={{ flex: 1, minWidth: '80px', textAlign: 'center', padding: '12px', borderTop: `3px solid ${stat.color}` }}>
+                        ].map((stat, i) => (
+                            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1, type: 'spring' }} key={stat.label} className="card" style={{ flex: 1, minWidth: '80px', textAlign: 'center', padding: '12px', borderTop: `3px solid ${stat.color}` }}>
                                 <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: stat.color }}>{stat.value}</div>
                                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{stat.label}</div>
-                            </div>
+                            </motion.div>
                         ))}
                     </div>
 
@@ -92,9 +104,9 @@ export default function PlayerHistoryPage() {
                             <p style={{ color: 'var(--text-muted)' }}>ยังไม่มีประวัติการส่งงาน</p>
                         </div>
                     ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+                        <motion.div variants={containerVariants} initial="hidden" animate="show" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
                             {filtered.map(sub => (
-                                <div key={sub.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <motion.div variants={itemVariants} whileHover={{ y: -2 }} key={sub.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                         <div>
                                             <h3 style={{ fontSize: '1.2rem', fontWeight: 600 }}>{sub.task.title}</h3>
@@ -103,13 +115,15 @@ export default function PlayerHistoryPage() {
                                         <div className="badge badge-points">+{sub.task.points} pt</div>
                                     </div>
                                     {sub.imageUrl && (
-                                        <a href={sub.imageUrl} target="_blank" rel="noopener noreferrer">
+                                        <motion.a whileHover={{ scale: 1.02 }} href={sub.imageUrl} target="_blank" rel="noopener noreferrer">
                                             {sub.imageUrl.toLowerCase().endsWith('.pdf') ? (
                                                 <iframe src={sub.imageUrl} style={{ width: '100%', height: '180px', border: '1px solid #eee', borderRadius: 'var(--radius-sm)', pointerEvents: 'none' }} title="PDF Preview" />
                                             ) : (
-                                                <img src={sub.imageUrl} alt="หลักฐาน" loading="lazy" style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: 'var(--radius-md)', background: 'var(--background)' }} />
+                                                <div style={{ position: 'relative', width: '100%', height: '200px' }}>
+                                                    <Image src={sub.imageUrl} alt="หลักฐาน" fill sizes="(max-width: 768px) 100vw, 300px" style={{ objectFit: 'contain', borderRadius: 'var(--radius-md)', background: 'var(--background)' }} />
+                                                </div>
                                             )}
-                                        </a>
+                                        </motion.a>
                                     )}
                                     <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{sub.task.type}</span>
@@ -120,9 +134,9 @@ export default function PlayerHistoryPage() {
                                     {sub.status !== 'PENDING' && (
                                         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>ตรวจเมื่อ: {new Date(sub.updatedAt).toLocaleString('th-TH')}</p>
                                     )}
-                                </div>
+                                </motion.div>
                             ))}
-                        </div>
+                        </motion.div>
                     )}
                 </>
             )}
@@ -137,9 +151,9 @@ export default function PlayerHistoryPage() {
                             <p style={{ color: 'var(--text-muted)' }}>ยังไม่มีประวัติการแลกรางวัล</p>
                         </div>
                     ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <motion.div variants={containerVariants} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             {redeemLogs.map(log => (
-                                <div key={log.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <motion.div variants={itemVariants} whileHover={{ x: 4 }} key={log.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
                                         <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>
                                             {log.isGacha ? '🎲' : '🎁'} {log.rewardName}
@@ -150,12 +164,12 @@ export default function PlayerHistoryPage() {
                                         <span className="badge" style={{ background: 'var(--danger)', color: 'white' }}>-{log.pointsSpent} pt</span>
                                         {log.isGacha && <span style={{ marginLeft: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>กาชา</span>}
                                     </div>
-                                </div>
+                                </motion.div>
                             ))}
-                        </div>
+                        </motion.div>
                     )}
                 </>
             )}
-        </div>
+        </motion.div>
     );
 }

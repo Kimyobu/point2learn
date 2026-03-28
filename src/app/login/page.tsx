@@ -4,6 +4,7 @@ import { apiFetch } from '@/lib/apiClient';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveToken, getToken, clearToken } from '@/lib/sessionDB';
+import { siteConfig } from '@/config/site';
 
 export default function LoginPage() {
     const [username, setUsername] = useState('');
@@ -103,10 +104,10 @@ export default function LoginPage() {
                     router.push('/player');
                 }
             } else {
-                setError(data.error || 'Login failed');
+                setError(data.error || siteConfig.login.loginFailed);
             }
         } catch (err) {
-            setError('An error occurred. Please try again.');
+            setError(siteConfig.login.errorDefault);
         } finally {
             setLoading(false);
         }
@@ -130,9 +131,9 @@ export default function LoginPage() {
         }}>
             <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '400px', textAlign: 'center' }}>
                 <div className="animate-float" style={{ fontSize: '4rem', marginBottom: '16px' }}>✨</div>
-                <h1 className="title" style={{ fontSize: '2.5rem', marginBottom: '8px' }}>Point2Learn</h1>
+                <h1 className="title" style={{ fontSize: '2.5rem', marginBottom: '8px' }}>{siteConfig.login.headline}</h1>
                 <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '1.1rem' }}>
-                    Welcome back! Ready for your next mission?
+                    {siteConfig.login.subheadline}
                 </p>
 
                 {error && (
@@ -152,7 +153,7 @@ export default function LoginPage() {
                     <input
                         type="text"
                         className="input-field"
-                        placeholder="Username (e.g., player)"
+                        placeholder={siteConfig.login.usernamePlaceholder}
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         required
@@ -161,7 +162,7 @@ export default function LoginPage() {
                     <input
                         type="password"
                         className="input-field"
-                        placeholder="Password (e.g., love123)"
+                        placeholder={siteConfig.login.passwordPlaceholder}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -174,7 +175,7 @@ export default function LoginPage() {
                         style={{ marginTop: '8px' }}
                         disabled={loading}
                     >
-                        {loading ? 'Logging in...' : 'Login'}
+                        {loading ? siteConfig.login.loginLoading : siteConfig.login.loginButton}
                     </button>
                 </form>
             </div>
