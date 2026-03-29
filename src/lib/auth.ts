@@ -12,7 +12,7 @@ const ACCESS_TOKEN_EXPIRY = '1h'
 // Refresh token: long-lived (90 days)
 const REFRESH_TOKEN_DAYS = 90
 
-export async function encrypt(payload: any) {
+async function encrypt(payload: any) {
     return await new SignJWT(payload)
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
@@ -20,15 +20,11 @@ export async function encrypt(payload: any) {
         .sign(key)
 }
 
-export async function decrypt(input: string): Promise<any> {
+async function decrypt(input: string): Promise<any> {
     const { payload } = await jwtVerify(input, key, {
         algorithms: ['HS256'],
     })
     return payload
-}
-
-export async function hashPassword(password: string) {
-    return await bcrypt.hash(password, 10)
 }
 
 export async function comparePassword(password: string, hash: string) {
@@ -36,34 +32,21 @@ export async function comparePassword(password: string, hash: string) {
 }
 
 export async function getSession() {
-    // 1. Try cookie first
+    // Try cookie
     const cookieStore = await cookies()
     const sessionToken = cookieStore.get('session')?.value
     if (sessionToken) {
         try {
             return await decrypt(sessionToken)
         } catch (err) {
-            // invalid or expired cookie, fall through
+            // invalid or expired cookie
         }
-    }
-
-    // 2. Fallback: check Authorization header
-    try {
-        const { headers } = await import('next/headers')
-        const headersList = await headers()
-        const authHeader = headersList.get('authorization')
-        if (authHeader?.startsWith('Bearer ')) {
-            const token = authHeader.slice(7)
-            return await decrypt(token)
-        }
-    } catch (err) {
-        // headers not available or invalid token
     }
 
     return null
 }
 
-export async function setSessionCookie(accessToken: string) {
+async function setSessionCookie(accessToken: string) {
     const cookieStore = await cookies()
     cookieStore.set('session', accessToken, {
         expires: new Date(Date.now() + 60 * 60 * 1000), // 1 hour (match JWT)
@@ -162,9 +145,7 @@ export async function deleteSessionByToken(refreshToken: string) {
     }
 }
 
-export async function deleteAllUserSessions(userId: string) {
-    await prisma.session.deleteMany({ where: { userId } })
-}
+
 
 export async function destroySession() {
     const cookieStore = await cookies()
