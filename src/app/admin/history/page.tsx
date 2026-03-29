@@ -30,7 +30,8 @@ type RedeemLog = {
     rewardName: string;
     pointsSpent: number;
     isGacha: boolean;
-    createdAt: string;
+    redeemAt: string;
+    stockRemaining: number;
     user?: { username: string; displayName: string | null };
 };
 
@@ -171,7 +172,7 @@ export default function AdminHistoryPage() {
                                             </h3>
                                             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                                                 {playerName && <><span style={{ fontWeight: 600 }}>👤 {playerName}</span> • </>}
-                                                {new Date(log.createdAt).toLocaleString('th-TH')}
+                                                {new Date(log.redeemAt).toLocaleString('th-TH')}
                                             </p>
                                         </div>
                                         <div>

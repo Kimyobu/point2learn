@@ -11,12 +11,12 @@ export async function GET() {
         if (session.role === 'ADMIN') {
             logs = await prisma.redeemLog.findMany({
                 include: { user: { select: { username: true, displayName: true } } },
-                orderBy: { createdAt: 'desc' }
+                orderBy: { redeemAt: 'desc' }
             })
         } else {
             logs = await prisma.redeemLog.findMany({
                 where: { userId: session.userId },
-                orderBy: { createdAt: 'desc' }
+                orderBy: { redeemAt: 'desc' }
             })
         }
         return NextResponse.json(logs)

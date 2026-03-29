@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json()
-        const { name, description, pointsCost, imageUrl } = body
+        const { name, description, pointsCost, imageUrl, cooldownMin, stock } = body
 
         const reward = await prisma.reward.create({
             data: {
@@ -31,7 +31,9 @@ export async function POST(req: NextRequest) {
                 description,
                 pointsCost: parseInt(pointsCost),
                 imageUrl,
-                isAvailable: true
+                isAvailable: true,
+                cooldownMin: parseInt(cooldownMin),
+                stock: parseInt(stock)
             }
         })
 
@@ -39,5 +41,23 @@ export async function POST(req: NextRequest) {
     } catch (error) {
         console.error('[API Error]', error);
         return NextResponse.json({ error: 'Failed to create reward' }, { status: 500 })
+    }
+}
+
+export async function DELETE(req: NextRequest) {
+    try {
+        const session = await getSession()
+        if (!session || session.role !== 'ADMIN') {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        const { id } = await req.json()
+        const reward = await prisma.reward.delete({
+            where: { id }
+        })
+        return NextResponse.json(reward)
+    } catch (error) {
+        console.error('[API Error]', error);
+        return NextResponse.json({ error: 'Failed to delete reward' }, { status: 500 })
     }
 }

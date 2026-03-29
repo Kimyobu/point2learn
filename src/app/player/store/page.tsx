@@ -18,7 +18,17 @@ const itemVariants = {
     show: { opacity: 1, y: 0, transition: { ease: [0.25, 1, 0.5, 1] as const, duration: 0.4 } }
 };
 
-type Reward = { id: string; name: string; description: string; pointsCost: number; imageUrl: string | null };
+type Reward = { id: string; name: string; description: string; pointsCost: number; imageUrl: string | null; stock: number, cooldownMin: number };
+type RedeemLog = {
+    id: string;
+    rewardName: string;
+    rewardId: string;
+    pointsSpent: number;
+    isGacha: boolean;
+    redeemAt: string;
+    stockRemaining: number;
+    user?: { username: string; displayName: string | null };
+};
 
 export default function StorePage() {
     const { user, refreshUser } = usePlayerUser();
@@ -27,12 +37,15 @@ export default function StorePage() {
     const [gachaAnimating, setGachaAnimating] = useState<string | null>(null);
 
     // Cooldown state
-    const [cooldown, setCooldown] = useState(0);
+    const [cooldownMax, setCooldownMax] = useState(0);
+    const [globalCooldown, setGlobalCooldown] = useState(0);
 
     // Ang Pao state
     const [angPaoVisible, setAngPaoVisible] = useState(false);
     const [angPaoPoints, setAngPaoPoints] = useState<number | undefined>(undefined);
     const [angPaoMessage, setAngPaoMessage] = useState<string | undefined>(undefined);
+
+    const [redeemLogs, setRedeemLogs] = useState<RedeemLog[]>([]);
 
     useEffect(() => {
         fetchRewards();
@@ -40,19 +53,24 @@ export default function StorePage() {
 
     // Cooldown timer
     useEffect(() => {
-        if (cooldown > 0) {
-            const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+        if (cooldownMax > 0) {
+            const timer = setTimeout(() => {
+                setCooldownMax(cooldownMax - 1)
+                if (globalCooldown > 0) setGlobalCooldown(globalCooldown - 1)
+            }, 1000);
             return () => clearTimeout(timer);
         }
-    }, [cooldown]);
+    }, [cooldownMax]);
 
     const fetchRewards = async () => {
         const res = await apiFetch('/api/rewards');
         if (res.ok) setRewards(await res.json());
+        const res2 = await apiFetch(`/api/redeem-logs`)
+        if (res2.ok) setRedeemLogs(await res2.json());
     };
 
     const handleRedeem = async (reward: Reward) => {
-        if (cooldown > 0) return;
+        if (globalCooldown > 0) return;
 
         const isAngPao = reward.name.includes('อั่งเปา') || reward.name.includes('angpao') || reward.name.toLowerCase().includes('ang pao');
         const isGacha = !isAngPao && (reward.name.includes('สุ่ม') || reward.name.toLowerCase().includes('gacha') || reward.name.includes('กล่อง'));
@@ -80,7 +98,7 @@ export default function StorePage() {
         const data = await res.json();
         if (res.ok) {
             // เริ่ม Cooldown หลังซื้อสำเร็จ
-            setCooldown(5);
+            setGlobalCooldown(5);
             refreshUser();
 
             if (isAngPao) {
@@ -95,9 +113,10 @@ export default function StorePage() {
             }
         } else {
             alert(data.error || siteConfig.playerStore.alertError);
-            setCooldown(2); // ซื้อพลาดก็มีคูลดาวน์สั้นๆ
+            setGlobalCooldown(2); // ซื้อพลาดก็มีคูลดาวน์สั้นๆ
         }
         setRedeeming(null);
+        fetchRewards();
     };
 
     return (
@@ -138,11 +157,11 @@ export default function StorePage() {
                 <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem' }}>
                     {siteConfig.playerStore.subheadline}
                 </p>
-                {cooldown > 0 && (
-                    <div style={{ 
-                        marginTop: '16px', 
-                        display: 'inline-flex', 
-                        alignItems: 'center', 
+                {globalCooldown > 0 && (
+                    <div style={{
+                        marginTop: '16px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
                         gap: '8px',
                         background: 'rgba(238, 114, 20, 0.1)',
                         padding: '8px 16px',
@@ -150,7 +169,7 @@ export default function StorePage() {
                         color: '#d97706',
                         fontWeight: 600
                     }}>
-                        ⏳ {siteConfig.playerStore.btnCooldownWait}... ({cooldown}s)
+                        ⏳ {siteConfig.playerStore.btnCooldownWait}... ({globalCooldown}s)
                     </div>
                 )}
             </div>
@@ -162,10 +181,26 @@ export default function StorePage() {
                         {siteConfig.playerStore.emptyStore}
                     </div>
                 ) : rewards.map(reward => {
+
+
                     const isAnimating = gachaAnimating === reward.id;
                     const isAngPao = reward.name.includes('อั่งเปา') || reward.name.includes('angpao') || reward.name.toLowerCase().includes('ang pao');
                     const hasEnoughPoints = (user?.points ?? 0) >= reward.pointsCost;
+
+                    const log = redeemLogs.find(log => log.rewardId === reward.id);
+
+                    let cooldown = 0
+                    if (reward.cooldownMin > 0 && log && log.redeemAt) {
+                        const timeDiff = Date.now() - new Date(log.redeemAt).getTime();
+                        const cooldownSeconds = reward.cooldownMin * 60;
+                        if (timeDiff < cooldownSeconds * 1000) {
+                            cooldown = cooldownSeconds - (timeDiff / 1000);
+                        }
+                    } else cooldown = globalCooldown
+                    if (cooldown > cooldownMax) setCooldownMax(cooldown)
                     const isCooldown = cooldown > 0;
+
+                    const isOutofStock = reward.stock <= 0
 
                     return (
                         <motion.div
@@ -221,15 +256,17 @@ export default function StorePage() {
                             <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '8px', lineHeight: 1.2 }}>
                                 {reward.name}
                             </h3>
+                            <p>ราคา: {reward.pointsCost}{siteConfig.global.pointsSuffix}</p>
+                            <p style={{ marginBottom: '12px' }}>เหลือ: {reward.stock}</p>
                             {reward.description && <p style={{ color: 'var(--text-muted)', flex: 1, marginBottom: '24px', fontSize: '1rem', lineHeight: 1.5 }}>{reward.description}</p>}
 
                             <button
-                                className={hasEnoughPoints && !isCooldown ? 'btn-primary' : 'btn-secondary'}
+                                className={hasEnoughPoints && !isCooldown && !isOutofStock ? 'btn-primary' : 'btn-secondary'}
                                 onClick={() => handleRedeem(reward)}
-                                disabled={redeeming === reward.id || isAnimating || !hasEnoughPoints || isCooldown}
+                                disabled={redeeming === reward.id || isAnimating || !hasEnoughPoints || isCooldown || isOutofStock}
                                 style={{
                                     marginTop: 'auto',
-                                    opacity: (!hasEnoughPoints || isCooldown) ? 0.6 : 1,
+                                    opacity: 1,
                                     cursor: (!hasEnoughPoints || isCooldown) ? 'not-allowed' : 'pointer',
                                     justifyContent: 'center',
                                     padding: '16px',
@@ -241,12 +278,13 @@ export default function StorePage() {
                                     } : {}),
                                 }}
                             >
-                                {isAnimating ? siteConfig.playerStore.btnGachaAnimating :
-                                    redeeming === reward.id ? siteConfig.playerStore.btnRedeeming :
-                                        isCooldown ? `${siteConfig.playerStore.btnCooldownWait} (${cooldown}s)` :
-                                            !hasEnoughPoints ? `${siteConfig.playerStore.btnInsufficientPoints} (-${reward.pointsCost} ${siteConfig.global.pointsSuffix})` :
-                                                isAngPao ? <span>🧧 {siteConfig.playerStore.btnRedeemAngPao} (-{reward.pointsCost} {siteConfig.global.pointsSuffix})</span> :
-                                                    <span>{siteConfig.playerStore.btnRedeemNormal} (-{reward.pointsCost} {siteConfig.global.pointsSuffix})</span>}
+                                {isOutofStock ? siteConfig.playerStore.btnOutofStock :
+                                    isAnimating ? siteConfig.playerStore.btnGachaAnimating :
+                                        redeeming === reward.id ? siteConfig.playerStore.btnRedeeming :
+                                            isCooldown ? `${cooldown >= 60 ? `${Math.floor(cooldown / 60)}m${Math.floor(cooldown % 60)}s` : `${Math.floor(cooldown)}s`}` :
+                                                !hasEnoughPoints ? `${siteConfig.playerStore.btnInsufficientPoints})` :
+                                                    isAngPao ? <span>🧧 {siteConfig.playerStore.btnRedeemAngPao}</span> :
+                                                        <span>{siteConfig.playerStore.btnRedeemNormal}</span>}
                             </button>
                         </motion.div>
                     );

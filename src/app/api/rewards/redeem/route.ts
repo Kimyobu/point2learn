@@ -30,6 +30,10 @@ export async function POST(req: NextRequest) {
                 throw new Error('Not enough points')
             }
 
+            if (reward.stock <= 0) {
+                throw new Error('Reward is out of stock')
+            }
+
             // Deduct points
             const updatedUser = await tx.user.update({
                 where: { id: user.id },
@@ -40,23 +44,30 @@ export async function POST(req: NextRequest) {
 
             // Log the redeem
             const isGacha = reward.name.includes('สุ่ม') || reward.name.toLowerCase().includes('gacha') || reward.name.includes('กล่อง');
+            const updatedReward = await tx.reward.update({
+                where: { id: reward.id },
+                data: { stock: { decrement: 1 } }
+            })
             await tx.redeemLog.create({
                 data: {
                     userId: user.id,
                     rewardId: reward.id,
                     rewardName: reward.name,
                     pointsSpent: reward.pointsCost,
-                    isGacha,
+                    isGacha: isGacha,
+                    stockRemaining: reward.stock,
+                    redeemAt: new Date(),
                 }
             })
 
-            return { user: updatedUser, reward }
+            return { user: updatedUser, reward: updatedReward }
         })
 
         return NextResponse.json({
             success: true,
             message: `Successfully redeemed ${result.reward.name}!`,
-            pointsRemaining: result.user.points
+            pointsRemaining: result.user.points,
+            stockRemaining: result.reward.stock
         })
     } catch (error: any) {
         console.error('[API Error]', error);

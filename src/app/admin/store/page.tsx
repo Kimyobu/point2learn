@@ -24,7 +24,7 @@ export default function StoreManagerPage() {
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
 
-    const [newReward, setNewReward] = useState({ name: '', description: '', pointsCost: 100, imageUrl: '', cooldownMin: 0 });
+    const [newReward, setNewReward] = useState({ name: '', description: '', pointsCost: 100, imageUrl: '', cooldownMin: 0, stock: 1 });
 
     useEffect(() => {
         fetchRewards();
@@ -57,7 +57,11 @@ export default function StoreManagerPage() {
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`ต้องการลบ ${name} ${siteConfig.adminStore.confirmDeleteSuffix}`)) return;
 
-        const res = await apiFetch(`/api/rewards/${id}`, { method: 'DELETE' });
+        const res = await apiFetch(`/api/rewards`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
         if (res.ok) {
             alert(siteConfig.adminStore.alertDeleteSuccess);
             await fetchRewards();
@@ -76,7 +80,7 @@ export default function StoreManagerPage() {
 
         if (res.ok) {
             alert(siteConfig.adminStore.alertCreateSuccess);
-            setNewReward({ name: '', description: '', pointsCost: 100, imageUrl: '', cooldownMin: 0 });
+            setNewReward({ name: '', description: '', pointsCost: 100, imageUrl: '', cooldownMin: 0, stock: 1 });
             await fetchRewards();
         } else {
             alert(siteConfig.adminStore.alertError);
@@ -141,8 +145,19 @@ export default function StoreManagerPage() {
                                 type="number"
                                 className="input-field"
                                 min="1"
-                                value={newReward.pointsCost}
+                                value={newReward.pointsCost.toString()}
                                 onChange={e => setNewReward({ ...newReward, pointsCost: parseInt(e.target.value) || 0 })}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '0.95rem' }}>{siteConfig.adminStore.formStockLabel}</label>
+                            <input
+                                type="number"
+                                className="input-field"
+                                min="1"
+                                value={newReward.stock.toString()}
+                                onChange={e => setNewReward({ ...newReward, stock: parseInt(e.target.value) || 0 })}
                                 required
                             />
                         </div>
@@ -152,7 +167,7 @@ export default function StoreManagerPage() {
                                 type="number"
                                 className="input-field"
                                 min="0"
-                                value={newReward.cooldownMin}
+                                value={newReward.cooldownMin.toString()}
                                 onChange={e => setNewReward({ ...newReward, cooldownMin: parseInt(e.target.value) || 0 })}
                             />
                         </div>

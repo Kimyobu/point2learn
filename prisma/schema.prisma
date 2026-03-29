@@ -63,6 +63,8 @@ model Reward {
   isAvailable Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  stock       Int?
+  cooldownMin Int      @default(0)
 }
 
 model Message {
@@ -87,7 +89,8 @@ model RedeemLog {
   rewardName  String
   pointsSpent Int
   isGacha     Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  stockRemaining Int?
+  redeemAt    DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
 }
