@@ -1,5 +1,6 @@
 'use client';
 import { apiFetch } from '@/lib/apiClient';
+import Swal from 'sweetalert2';
 
 import { useEffect, useState } from 'react';
 
@@ -36,10 +37,10 @@ export default function AccountManagerPage() {
         });
 
         if (res.ok) {
-            alert('เปลี่ยนรหัสผ่านสำเร็จ!');
+            Swal.fire('สำเร็จ', 'เปลี่ยนรหัสผ่านสำเร็จ!', 'success');
             setNewPassword('');
         } else {
-            alert('เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน');
+            Swal.fire('ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน', 'error');
         }
         setLoading(false);
     };

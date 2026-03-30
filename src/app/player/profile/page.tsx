@@ -1,5 +1,6 @@
 'use client';
 import { apiFetch } from '@/lib/apiClient';
+import Swal from 'sweetalert2';
 
 import { useEffect, useState } from 'react';
 import { usePlayerUser } from '@/context/PlayerUser';
@@ -52,7 +53,7 @@ export default function ProfilePage() {
         if (res.ok) {
             setAvatarUrl(data.url); // Use the uploaded file url
         } else {
-            alert('อัปโหลดรูปไม่สำเร็จค่ะ');
+            Swal.fire('ข้อผิดพลาด', 'อัปโหลดรูปไม่สำเร็จค่ะ', 'error');
         }
         setUploading(false);
     };
@@ -84,11 +85,11 @@ export default function ProfilePage() {
 
         const data = await res.json();
         if (res.ok) {
-            alert('บันทึกโปรไฟล์สำเร็จ! (สีธีมจะเปลี่ยนหลังจากรีเฟรชหน้าเว็บนะคะ)');
+            await Swal.fire('สำเร็จ', 'บันทึกโปรไฟล์สำเร็จ! (สีธีมจะเปลี่ยนหลังจากรีเฟรชหน้าเว็บนะคะ)', 'success');
             await refreshUser(); // อัปเดต layout header
             window.location.reload();
         } else {
-            alert(data.error || 'เกิดข้อผิดพลาดในการบันทึกโปรไฟล์');
+            Swal.fire('ข้อผิดพลาด', data.error || 'เกิดข้อผิดพลาดในการบันทึกโปรไฟล์', 'error');
         }
         setSaving(false);
     };
@@ -103,11 +104,11 @@ export default function ProfilePage() {
         });
         const data = await res.json();
         if (res.ok) {
-            alert('เปลี่ยนรหัสผ่านสำเร็จค่ะ! 💖');
+            Swal.fire('สำเร็จ', 'เปลี่ยนรหัสผ่านสำเร็จค่ะ! 💖', 'success');
             setOldPassword('');
             setNewPassword('');
         } else {
-            alert(data.error || 'รหัสผ่านเดิมไม่ถูกต้อง หรือเกิดข้อผิดพลาด');
+            Swal.fire('ข้อผิดพลาด', data.error || 'รหัสผ่านเดิมไม่ถูกต้อง หรือเกิดข้อผิดพลาด', 'error');
         }
         setPassSaving(false);
     };

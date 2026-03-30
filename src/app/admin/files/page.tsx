@@ -1,5 +1,6 @@
 'use client';
 import { apiFetch } from '@/lib/apiClient';
+import Swal from 'sweetalert2';
 
 import { useEffect, useState } from 'react';
 
@@ -28,11 +29,11 @@ export default function FileExplorerPage() {
                 const data = await res.json();
                 setItems(data.items);
             } else {
-                alert('ไม่สามารถโหลดแฟ้มข้อมูลได้ อาจจะไม่มี फोลเดอร์นี้');
+                Swal.fire('ข้อผิดพลาด', 'ไม่สามารถโหลดแฟ้มข้อมูลได้ อาจจะไม่มีโฟลเดอร์นี้', 'error');
                 setPath(''); // fallback to root
             }
         } catch (e) {
-            alert('เกิดข้อผิดพลาดในการโหลดข้อมูล');
+            Swal.fire('ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการโหลดข้อมูล', 'error');
         } finally {
             setLoading(false);
         }
@@ -51,7 +52,16 @@ export default function FileExplorerPage() {
     };
 
     const handleDelete = async (itemName: string) => {
-        if (!confirm(`ยืนยันลบ ${itemName} ถาวรหรือไม่?`)) return;
+        const result = await Swal.fire({
+            title: 'ยืนยันการลบ',
+            text: `ยืนยันลบ ${itemName} ถาวรหรือไม่?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'ลบเลย',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#d33'
+        });
+        if (!result.isConfirmed) return;
 
         const targetPath = path ? `${path}/${itemName}` : itemName;
         const res = await apiFetch(`/api/admin/files?path=${encodeURIComponent(targetPath)}`, { method: 'DELETE' });
@@ -59,7 +69,7 @@ export default function FileExplorerPage() {
         if (res.ok) {
             fetchFolder(path);
         } else {
-            alert('ไม่สามารถลบข้อมูลได้ อาจติด Permissions');
+            Swal.fire('ข้อผิดพลาด', 'ไม่สามารถลบข้อมูลได้ อาจติด Permissions', 'error');
         }
     };
 
@@ -77,14 +87,21 @@ export default function FileExplorerPage() {
         if (res.ok) {
             fetchFolder(path);
         } else {
-            alert('อัปโหลดไม่สำเร็จ หรือไม่มีสิทธิ์เขียนไฟล์ที่นี่');
+            Swal.fire('ข้อผิดพลาด', 'อัปโหลดไม่สำเร็จ หรือไม่มีสิทธิ์เขียนไฟล์ที่นี่', 'error');
         }
         setUploading(false);
         (document.getElementById('file-upload') as HTMLInputElement).value = '';
     };
 
     const handleCreateFolder = async () => {
-        const folderName = prompt('ชื่อโฟลเดอร์ใหม่:');
+        const { value: folderName } = await Swal.fire({
+            title: 'สร้างโฟลเดอร์',
+            input: 'text',
+            inputLabel: 'ชื่อโฟลเดอร์ใหม่:',
+            showCancelButton: true,
+            confirmButtonText: 'สร้าง',
+            cancelButtonText: 'ยกเลิก'
+        });
         if (!folderName) return;
 
         const formData = new FormData();
@@ -96,7 +113,7 @@ export default function FileExplorerPage() {
         if (res.ok) {
             fetchFolder(path);
         } else {
-            alert('สร้างโฟลเดอร์ไม่สำเร็จ');
+            Swal.fire('ข้อผิดพลาด', 'สร้างโฟลเดอร์ไม่สำเร็จ', 'error');
         }
     };
 

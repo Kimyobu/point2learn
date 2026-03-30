@@ -1,5 +1,6 @@
 'use client';
 import { apiFetch } from '@/lib/apiClient';
+import Swal from 'sweetalert2';
 
 import { useEffect, useState } from 'react';
 
@@ -29,7 +30,16 @@ export default function DbEditorPage() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('ยืนยันการลบข้อมูลนี้ถาวร?')) return;
+        const result = await Swal.fire({
+            title: 'ยืนยันการลบ',
+            text: 'ยืนยันการลบข้อมูลนี้ถาวร?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'ลบข้อมูล',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#d33'
+        });
+        if (!result.isConfirmed) return;
         const res = await apiFetch('/api/admin/db', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
@@ -38,7 +48,7 @@ export default function DbEditorPage() {
         if (res.ok) {
             setData(data.filter(item => item.id !== id));
         } else {
-            alert('ลบข้อมูลไม่สำเร็จ');
+            Swal.fire('ข้อผิดพลาด', 'ลบข้อมูลไม่สำเร็จ', 'error');
         }
     };
 
@@ -71,7 +81,7 @@ export default function DbEditorPage() {
             setEditingId(null);
             await fetchData(model);
         } else {
-            alert('บันทึกข้อมูลไม่สำเร็จ');
+            Swal.fire('ข้อผิดพลาด', 'บันทึกข้อมูลไม่สำเร็จ', 'error');
         }
     };
 
@@ -103,7 +113,19 @@ export default function DbEditorPage() {
                     onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
-                        if (!confirm('ยืนยันระบบจะนำไฟล์นี้ไปทับฐานข้อมูลเดิมทั้งหมดบน Server แน่ใจหรือไม่?')) return;
+                        const result = await Swal.fire({
+                            title: 'คำเตือน!',
+                            text: 'ยืนยันระบบจะนำไฟล์นี้ไปทับฐานข้อมูลเดิมทั้งหมดบน Server แน่ใจหรือไม่?',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonText: 'อัปโหลดทับของเดิม',
+                            cancelButtonText: 'ยกเลิก',
+                            confirmButtonColor: '#d33'
+                        });
+                        if (!result.isConfirmed) {
+                            (document.getElementById('db-upload') as HTMLInputElement).value = '';
+                            return;
+                        }
 
                         setLoading(true);
                         const formData = new FormData();
@@ -113,13 +135,13 @@ export default function DbEditorPage() {
                             const res = await apiFetch('/api/admin/db-upload', { method: 'POST', body: formData });
                             const data = await res.json();
                             if (res.ok) {
-                                alert(data.message || 'อัปโหลดเรียบร้อย โปรเจกต์อาจจะเริ่มการทำงานใหม่สักครู่');
+                                Swal.fire('สำเร็จ', data.message || 'อัปโหลดเรียบร้อย โปรเจกต์อาจจะเริ่มการทำงานใหม่สักครู่', 'success');
                                 fetchData(model);
                             } else {
-                                alert('Error: ' + data.error);
+                                Swal.fire('ข้อผิดพลาด', 'Error: ' + data.error, 'error');
                             }
                         } catch (err) {
-                            alert('Upload failed');
+                            Swal.fire('ข้อผิดพลาด', 'Upload failed', 'error');
                         }
 
                         // Clear input

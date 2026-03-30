@@ -1,5 +1,6 @@
 'use client';
 import { apiFetch } from '@/lib/apiClient';
+import Swal from 'sweetalert2';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -49,13 +50,22 @@ export default function StoreManagerPage() {
         if (res.ok) {
             setNewReward(prev => ({ ...prev, imageUrl: data.url }));
         } else {
-            alert('อัปโหลดรูปไม่สำเร็จค่ะ');
+            Swal.fire('ข้อผิดพลาด', 'อัปโหลดรูปไม่สำเร็จค่ะ', 'error');
         }
         setUploading(false);
     };
 
     const handleDelete = async (id: string, name: string) => {
-        if (!confirm(`ต้องการลบ ${name} ${siteConfig.adminStore.confirmDeleteSuffix}`)) return;
+        const result = await Swal.fire({
+            title: 'ยืนยันการลบ',
+            text: `ต้องการลบ ${name} ${siteConfig.adminStore.confirmDeleteSuffix}`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'ลบข้อมูล',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#d33'
+        });
+        if (!result.isConfirmed) return;
 
         const res = await apiFetch(`/api/rewards`, {
             method: 'DELETE',
@@ -63,7 +73,7 @@ export default function StoreManagerPage() {
             body: JSON.stringify({ id })
         });
         if (res.ok) {
-            alert(siteConfig.adminStore.alertDeleteSuccess);
+            Swal.fire('สำเร็จ', siteConfig.adminStore.alertDeleteSuccess, 'success');
             await fetchRewards();
         }
     };
@@ -79,11 +89,11 @@ export default function StoreManagerPage() {
         });
 
         if (res.ok) {
-            alert(siteConfig.adminStore.alertCreateSuccess);
+            Swal.fire('สำเร็จ', siteConfig.adminStore.alertCreateSuccess, 'success');
             setNewReward({ name: '', description: '', pointsCost: 100, imageUrl: '', cooldownMin: 0, stock: 1 });
             await fetchRewards();
         } else {
-            alert(siteConfig.adminStore.alertError);
+            Swal.fire('ข้อผิดพลาด', siteConfig.adminStore.alertError, 'error');
         }
         setLoading(false);
     };

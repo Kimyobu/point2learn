@@ -1,6 +1,7 @@
 'use client';
 import { apiFetch } from '@/lib/apiClient';
 import { useEffect, useState } from 'react';
+import Swal from 'sweetalert2';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { siteConfig } from '@/config/site';
@@ -35,7 +36,15 @@ export default function SubmissionReviewPage() {
     };
 
     const handleAction = async (id: string, status: 'APPROVED' | 'REJECTED') => {
-        if (!confirm(status === 'APPROVED' ? siteConfig.adminDashboard.confirmApprove : siteConfig.adminDashboard.confirmReject)) return;
+        const result = await Swal.fire({
+            title: 'ยืนยัน',
+            text: status === 'APPROVED' ? siteConfig.adminDashboard.confirmApprove : siteConfig.adminDashboard.confirmReject,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'ตกลง',
+            cancelButtonText: 'ยกเลิก'
+        });
+        if (!result.isConfirmed) return;
 
         setLoading(id);
         const res = await apiFetch(`/api/submissions/${id}`, {
@@ -45,10 +54,10 @@ export default function SubmissionReviewPage() {
         });
 
         if (res.ok) {
-            alert(status === 'APPROVED' ? siteConfig.adminDashboard.alertApproveSuccess : siteConfig.adminDashboard.alertRejectSuccess);
+            Swal.fire('สำเร็จ', status === 'APPROVED' ? siteConfig.adminDashboard.alertApproveSuccess : siteConfig.adminDashboard.alertRejectSuccess, 'success');
             await fetchSubmissions();
         } else {
-            alert(siteConfig.adminDashboard.alertError);
+            Swal.fire('ข้อผิดพลาด', siteConfig.adminDashboard.alertError, 'error');
         }
         setLoading(null);
     };

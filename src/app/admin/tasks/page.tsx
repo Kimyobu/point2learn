@@ -1,5 +1,6 @@
 'use client';
 import { apiFetch } from '@/lib/apiClient';
+import Swal from 'sweetalert2';
 
 import { useEffect, useState } from 'react';
 
@@ -46,18 +47,27 @@ export default function TaskManagerPage() {
         });
 
         if (res.ok) {
-            alert('สร้างภารกิจสำเร็จ!');
+            Swal.fire('สำเร็จ', 'สร้างภารกิจสำเร็จ!', 'success');
             setFormData({ title: '', description: '', points: 10, type: taskTypes[0]?.name || 'DAILY', customType: '', isGoogleForm: false });
             setShowCustomType(false);
             await fetchTasks();
         } else {
-            alert('เกิดข้อผิดพลาดในการสร้างภารกิจ');
+            Swal.fire('ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการสร้างภารกิจ', 'error');
         }
         setLoading(false);
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('ลบภารกิจนี้?')) return;
+        const result = await Swal.fire({
+            title: 'ยืนยันการลบ',
+            text: 'ลบภารกิจนี้?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'ลบข้อมูล',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#d33'
+        });
+        if (!result.isConfirmed) return;
         const res = await apiFetch(`/api/tasks/${id}`, { method: 'DELETE' });
         if (res.ok) fetchTasks();
     };
@@ -75,12 +85,21 @@ export default function TaskManagerPage() {
             await fetchTaskTypes();
         } else {
             const data = await res.json();
-            alert(data.error || 'เกิดข้อผิดพลาด');
+            Swal.fire('ข้อผิดพลาด', data.error || 'เกิดข้อผิดพลาด', 'error');
         }
     };
 
     const handleDeleteType = async (id: string, name: string) => {
-        if (!confirm(`ลบประเภท "${name}"?`)) return;
+        const result = await Swal.fire({
+            title: 'ยืนยันการลบ',
+            text: `ลบประเภท "${name}"?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'ลบข้อมูล',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#d33'
+        });
+        if (!result.isConfirmed) return;
         const res = await apiFetch(`/api/task-types?id=${id}`, { method: 'DELETE' });
         if (res.ok) fetchTaskTypes();
     };

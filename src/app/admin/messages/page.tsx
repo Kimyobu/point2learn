@@ -1,5 +1,6 @@
 'use client';
 import { apiFetch } from '@/lib/apiClient';
+import Swal from 'sweetalert2';
 
 import { useEffect, useState } from 'react';
 
@@ -30,17 +31,26 @@ export default function MessageManagerPage() {
         });
 
         if (res.ok) {
-            alert('ส่งจดหมายลับสำเร็จ!');
+            Swal.fire('สำเร็จ', 'ส่งจดหมายลับสำเร็จ!', 'success');
             setContent('');
             await fetchMessages();
         } else {
-            alert('เกิดข้อผิดพลาดในการส่งข้อความ');
+            Swal.fire('ผิดพลาด', 'เกิดข้อผิดพลาดในการส่งข้อความ', 'error');
         }
         setLoading(false);
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('ลบข้อความนี้? (จะหายไปจากหน้าจอแฟน)')) return;
+        const result = await Swal.fire({
+            title: 'ยืนยันการลบ',
+            text: 'ลบข้อความนี้? (จะหายไปจากหน้าจอแฟน)',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'ลบเลย',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#d33'
+        });
+        if (!result.isConfirmed) return;
         const res = await apiFetch(`/api/messages/${id}`, { method: 'DELETE' });
         if (res.ok) fetchMessages();
     };

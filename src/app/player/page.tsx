@@ -1,5 +1,6 @@
 'use client';
 import { apiFetch } from '@/lib/apiClient';
+import Swal from 'sweetalert2';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -68,10 +69,10 @@ export default function PlayerDashboard() {
 
         const res = await apiFetch('/api/submissions', { method: 'POST', body: formData });
         if (res.ok) {
-            alert(siteConfig.playerDashboard.alertSubmitSuccess);
+            Swal.fire('สำเร็จ', siteConfig.playerDashboard.alertSubmitSuccess, 'success');
             await fetchData();
         } else {
-            alert(siteConfig.playerDashboard.alertSubmitFailed);
+            Swal.fire('ข้อผิดพลาด', siteConfig.playerDashboard.alertSubmitFailed, 'error');
         }
         setUploading(null);
     };

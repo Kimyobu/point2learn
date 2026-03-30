@@ -1,5 +1,6 @@
 'use client';
 import { apiFetch } from '@/lib/apiClient';
+import Swal from 'sweetalert2';
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
@@ -75,12 +76,20 @@ export default function StorePage() {
         const isAngPao = reward.name.includes('อั่งเปา') || reward.name.includes('angpao') || reward.name.toLowerCase().includes('ang pao');
         const isGacha = !isAngPao && (reward.name.includes('สุ่ม') || reward.name.toLowerCase().includes('gacha') || reward.name.includes('กล่อง'));
 
-        if (!confirm(isAngPao
-            ? `${siteConfig.playerStore.confirmAngPaoPrefix} ${reward.pointsCost} ${siteConfig.playerStore.confirmAngPaoSuffix}`
-            : isGacha
-                ? `${siteConfig.playerStore.confirmGachaPrefix} ${reward.pointsCost} ${siteConfig.playerStore.confirmGachaSuffix}`
-                : `ต้องการแลก ${reward.name} ด้วย ${reward.pointsCost} ${siteConfig.playerStore.confirmNormalSuffix}`)
-        ) return;
+        const confirmResult = await Swal.fire({
+            title: 'ยืนยันการแลกรางวัล',
+            text: isAngPao
+                ? `${siteConfig.playerStore.confirmAngPaoPrefix} ${reward.pointsCost} ${siteConfig.playerStore.confirmAngPaoSuffix}`
+                : isGacha
+                    ? `${siteConfig.playerStore.confirmGachaPrefix} ${reward.pointsCost} ${siteConfig.playerStore.confirmGachaSuffix}`
+                    : `ต้องการแลก ${reward.name} ด้วย ${reward.pointsCost} ${siteConfig.playerStore.confirmNormalSuffix}`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'แลกเลย',
+            cancelButtonText: 'ยกเลิก'
+        });
+
+        if (!confirmResult.isConfirmed) return;
 
         if (isGacha) {
             setGachaAnimating(reward.id);
@@ -107,12 +116,12 @@ export default function StorePage() {
                 setAngPaoMessage(data.message || `ได้รับ ${reward.name} แล้ว! ไปทวงกับที่รักเลย 💖`);
                 setAngPaoVisible(true);
             } else {
-                alert(isGacha
+                Swal.fire('สำเร็จ', isGacha
                     ? `${siteConfig.playerStore.alertGachaSuccess} \nพอยท์คงเหลือ: ${data.pointsRemaining} ${siteConfig.global.pointsSuffix}`
-                    : `${siteConfig.playerStore.alertRedeemSuccess} ${data.message} \nพอยท์คงเหลือ: ${data.pointsRemaining} ${siteConfig.global.pointsSuffix}`);
+                    : `${siteConfig.playerStore.alertRedeemSuccess} ${data.message} \nพอยท์คงเหลือ: ${data.pointsRemaining} ${siteConfig.global.pointsSuffix}`, 'success');
             }
         } else {
-            alert(data.error || siteConfig.playerStore.alertError);
+            Swal.fire('ข้อผิดพลาด', data.error || siteConfig.playerStore.alertError, 'error');
             setGlobalCooldown(2); // ซื้อพลาดก็มีคูลดาวน์สั้นๆ
         }
         setRedeeming(null);
